@@ -4,7 +4,7 @@
 #
 #================================================================================================
 #
-# Title: Corporatization, Remunicipalization, and Outsourcing: Public Firm Performance after  
+# Title: Remunicipalization, Corporatization, and Outsourcing: Public Firm Performance after  
 #        Reorganization
 # ------------------------------------------------------------------------------------------------
 #
@@ -419,9 +419,10 @@ table(data$urs_public,data$Jahr,useNA="ifany")
 # Identify plants whose parent firms have their main activities (NACE code) in sectors other than
 # sewerage and waste management
 # -----------------------------------------------------------------------------------------------
-# Reason: The survey setup changed in 2008 and newly included sewerage and waste management firms.
+# Reason: The survey setup changed in 2008 to include sewerage and waste management firms.
 # To be consistent over time and to avoid a structural break in 2008, exclude these firms from 
-# the analysis.
+# the analysis. Furthermore, exclude electricity and gas TSOs as there are too few companies
+# in Germany (4 electricity TSOs in total) to conform with the RDC's data privacy rules.
 data0_old <- subset(data, grepl(data$wz_u,pattern="37")==FALSE 
                     & grepl(data$wz_u,pattern="38")==FALSE 
                     & grepl(data$wz_u,pattern="39")==FALSE
@@ -465,97 +466,147 @@ addmargins(table(data_U$jab,data_U$Jahr,useNA="ifany"))
 
 
 #================================================================================================
-# 3) Generate controls for economic activities (industries)                                     
+# 3) Generate control variables for the economic activity (industries)                                     
 #================================================================================================
 
 
+#================================================================================================
+# 3.1 NACE code
+#================================================================================================
+
 # Generate a uniform 4-digit NACE code
-# -------------------------------------
+# ------------------------------------
 dstat(data0$wz_u)
 data0$wz <- as.numeric(substr(data0$wz_u,1,4))
 dstat(data0$wz)
 
 
 
-# Imputiere den Hauptenergieträger im Jahr 2012 für die Gaskraftwerke
-# -------------------------------------------------------------------
+#================================================================================================
+# 3.2 Impute the fuel type for gas-fired power and heat plants in 2012
+#================================================================================================
+
+# Reason: In 2012, there is a unusual decline in gas-fired power plants vis-à-vis 2011 and 2013
+# together with an increase in missing values.
 table(data0$HETGruppen,data0$Jahr,useNA="ifany")
-# Imputiere den Hauptenergietraeger für 2012 in den Gaskraftwerken, da hier ein auffälliger
-# Einbruch ggü Vorjahr und Folgejahr zu beobachten ist, dafür ein Anstieg bei den NA-Werten.
-# Isoliere die relevanten Variablen
+
+# Select the relevant variables
+# -----------------------------
 data_gkw <- subset(data0, select=c(bnr,Jahr,HETGruppen))
-# Unternehmen, die einen neuen HET-Wert erhalten, müssen 3 Bedingungen erfüllen:
+
+# Identify all power plants that are gas-fired in 2011 and 2013
+# -------------------------------------------------------------
 data_gkw$dgkw[data_gkw$Jahr==2011 & is.na(data_gkw$HETGruppen)==FALSE & data_gkw$HETGruppen==4] <- 1
 data_gkw$dgkw[data_gkw$Jahr==2013 & is.na(data_gkw$HETGruppen)==FALSE & data_gkw$HETGruppen==4] <- 1
 data1 <- aggregate(cbind("dgkw"=dgkw) ~ bnr, data_gkw,sum,na.rm=TRUE)
-# Normalize to 1.
+
+# Normalize to 1 and merge information to original data set
+# ---------------------------------------------------------
 data1$dgkw <- ifelse(data1$dgkw==2,1,NA)
 data0 <- merge(data0,data1,by=c("bnr"),all.x=TRUE)
+
+# Replace fuel type for all plants with missing fuel type in 2012 which are gas-fired in 2011 and 2013
+# ----------------------------------------------------------------------------------------------------
 data0$HETGruppen <- ifelse(is.na(data0$dgkw)==FALSE & data0$Jahr==2012,4,data0$HETGruppen)
 table(data0$HETGruppen,data0$Jahr,useNA="ifany")
 
 
 
-# Stromabsatz
+#================================================================================================
+# 3.3 Industry fixed effects
+#================================================================================================
+
+# Generate industry fixed effects. The industry fixed effects are not mutually exclusive and
+# allow to charactereize the product space of multi-product firms.
+
+# electricity retail
+# ------------------
+# criterion: participation in survey no. 83
 data0$sa <- ifelse(data0$TM083_u==1,1,0)
-# Stromverteilung
+
+# electricity distribution
+# ------------------------
+# criterion: participation in surveys no. 70 or no. 66N
 data0$sn <- ifelse((data0$TM070_u>0 | data0$TM066N_u>0),1,0)
-# Stromerzeugung
-data0$se <- ifelse(data0$TM066K_b==1 | (is.na(data0$HETGruppen)==FALSE),1,0)
-# Wärme
+
+# electricity generation
+# ----------------------
+# criterion: participation in survey no. 66K
+data0$se <- ifelse(data0$TM066K_b==1),1,0)
+
+# heat supply
+# -----------
+# criterion: participation in survey no. 64_b or positive number of employees
+# in the field of heat supply reported in survey no. 65.
 data0$wm <- ifelse(data0$TM064_b==1 | (is.na(data0$B_MBE_EF15_mean)==FALSE 
                                      & data0$B_MBE_EF15_mean>0),1,0)
-# Gas
+# gas supply
+# ----------
+# criterion: reported gas activity in KSE survey (firm/plant-level) or positive number of employees
+# in the field of gas supply reported in survey no. 65.
 data0$ga <- ifelse(data0$UI_Code11_3==1 | data0$BI_Code11_3==1 
                   | (is.na(data0$B_MBE_EF13_mean)==FALSE 
                      & data0$B_MBE_EF13_mean>0),1,0)
-# Wasser
+# water supply
+# ------------
+# criterion: reported water activity in KSE survey (firm/plant-level) or positive amount of water 
+# sold reported in KSE survey or positive number of employees in the field of water supply reported 
+# in survey no. 65 or NACE code of 3600 or 4100.
 data0$wa <- ifelse(data0$UI_Code11_4==1 | data0$BI_Code11_4==1
                   | (is.na(data0$UK_Code8701)==FALSE & data0$UK_Code8701>0) 
                   | (is.na(data0$B_MBE_EF17_mean)==FALSE 
                      & data0$B_MBE_EF17_mean>0) 
                   | is.na(data0$wz)==FALSE & (data0$wz==3600 | data0$wz==4100),1,0)
-# Abwasser
+
+# sewerage
+# --------
+# criterion: reported sewerage activity in KSE survey (firm/plant-level) or NACE code of 3700, 
+# 9000, or 9001.
 data0$aw <- ifelse(data0$UI_Code11_5==1 | data0$BI_Code11_5==1 | is.na(data0$wz)==FALSE 
                   & (data0$wz==3700 | data0$wz==9000 | data0$wz==9001),1,0)
-# Abfall
+
+# waste management
+# ----------------
 data0$af <- ifelse(data0$UI_Code11_6==1 | data0$BI_Code11_6==1 | is.na(data0$wz)==FALSE 
                   & (grepl(data0$wz,pattern="38")==TRUE
                      | grepl(data0$wz,pattern="39")==TRUE
                      | data0$wz==9002),1,0)
 
 
-# Wurde alle Betriebe klassifiziert, oder gibt es immernoch Betriebe, die 'gar nichts' machen?
+# Have all plants been sorted into at least one industry?
+# -------------------------------------------------------
 data0_rest <- subset(data0, sa==0 & sn==0 & se==0 & wa==0 & aw==0 & af==0)
 nrow(data0_rest)
 
 
-# Fasse diese Restbetriebe mit den Abfallbetrieben zu 'Abfall & Sonstiges' zusammen.
+# Label the remaining plants together with the waste management plants as 'miscellaneous'
+# ---------------------------------------------------------------------------------------
 data0$afs <- ifelse(data0$sa==0 & data0$sn==0 & data0$se==0 & data0$wa==0 & data0$aw==0,1,0)
 
 
-# Jetzt sollte es keine Betriebe mehr geben, die nicht klassifiziert wurden.
+# Check: There should be no more plants without industry affiliation
+# ------------------------------------------------------------------
 data0_rest2 <- subset(data0, sa==0 & sn==0 & se==0 & wa==0 & aw==0 & afs==0)
 nrow(data0_rest2)
 
 
 
-################################################################################
-##  1.2    Aggregierung  auf Unternehmensebene                                ##
-################################################################################
+#================================================================================================
+# 4) Aggregate plant-level data to firm level
+#================================================================================================
 
 
-# Schritt 1: Auswahl der Unternehmen
-# ----------------------------------
-# Wähle alle Unternehmen aus.
+#================================================================================================
+# 4.1 Aggregation
+#================================================================================================
 
+# Step 1: Replicate data set
+# --------------------------
 data_single <- data0
 
 
-# Schritt 2: Aggregierung der Variablen auf Unternehmensebene
-# -----------------------------------------------------------
-# Wähle alle Variablen aus, die für die Analyse interessant sind und aggregiere auf Unternehmens-
-# ebene.
+# Step 2: Compute mean of all variables observed at the firm level (=remain unchanged)
+# ------------------------------------------------------------------------------------
 data_single_mean <- aggregate(cbind("jab"=data_single$jab
                                     ,"urs_public"=data_single$urs_public
                                     ,"EF20"=data_single$EF20
@@ -622,7 +673,10 @@ data_single_mean <- aggregate(cbind("jab"=data_single$jab
                               ,by=list("unr"=data_single$unr,"Jahr"=data_single$Jahr),mean, na.rm=TRUE)
 
 
-# Aggregiere alle Betriebe auf Unternehmensebene (sum).
+
+# Step 3: Aggregate plant-level variables to firm level (sum)
+# -----------------------------------------------------------
+# Notes: Use sum function for quantity data (e.g., input and output volumes)
 data_single_sum <- aggregate(cbind("B_kraftw_EF2101U1"=data_single$B_kraftw_EF2101U1
                                    ,"B_kraftw_EF2101U2"=data_single$B_kraftw_EF2101U2
                                    ,"B_kraftw_EF2101U3"=data_single$B_kraftw_EF2101U3
@@ -647,6 +701,9 @@ data_single_sum <- aggregate(cbind("B_kraftw_EF2101U1"=data_single$B_kraftw_EF21
                              ,by=list("unr"=data_single$unr,"Jahr"=data_single$Jahr),sum,na.rm=TRUE)
 
 
+# Step 4: Aggregate plant-level variables to firm level (max)
+# -----------------------------------------------------------
+# Notes: Use max function for binary varables (fixed effects).
 data_single_max <- aggregate(cbind("TM066K_b"=data_single$TM066K_b
                                    ,"TM064_b"=data_single$TM064_b
                                    ,"TM066N_u"=data_single$TM066N_u
@@ -678,63 +735,71 @@ data_single_max <- aggregate(cbind("TM066K_b"=data_single$TM066K_b
 
 
 
-# Füge beide Datensätze zusammen.
+# Merge the three data sets
+# -------------------------
 data_single_U0 <- merge(data_single_mean,data_single_sum,by=c("unr","Jahr"))
 data_single_U <- merge(data_single_U0,data_single_max,by=c("unr","Jahr"))
 addmargins(table(data_single_U$Jahr,useNA="ifany"))
 
 
-# Deklariere data_single_U als finalen Datensatz zur Weiterverwendung. Erstelle die
-# Spalte 'id', welche der Unternehmensnummer 'unr' entspricht.
-
+# Rename index variable 'unr' -> 'id'
+# -----------------------------------
 data_single_U$id <- data_single_U$unr
 data_all <- data_single_U
 
 
-#########################################################################
-##    1.4 Recode einige Variablen für bessere Lesbarkeit               ##
-#########################################################################
+#================================================================================================
+# 4.2 Cleaning
+#================================================================================================
 
-# Es gibt keine Bruchzahlen in Tätigkeiten und Rechtsform.
 
-# Schaffe für alle Siedlungsstrukturen, die nicht ganzzahlig sind, eien neue Kategorie 5 ("gemischte 
-# Siedlungsstruktur")
+# Settlement structure
+# --------------------
+# create a new category '5 = mixed settlement structure' for non-integer settlement structures 
+# after aggregation
 length(which(data_all$Siedlung!=round(data_all$Siedlung,0))==TRUE)
 data_all$Siedlung[data_all$Siedlung!=round(data_all$Siedlung,0)] <- 5
 
-# Schaffe für alle Wirtschaftszweige, die nicht ganzzahlig sind, eine neue Kategorie 9999 
-# ("gemischte Wirtschaftszweige")
+# NACE codes
+# ----------
+# Create a new category '9999 = mixed NACE codes' for non-integer NACE codes after aggregation
 length(which(data_all$wz!=round(data_all$wz,0))==TRUE)
 data_all$wz[data_all$wz!=round(data_all$wz,0)] <- 9999
 
-# Schaffe für alle Bundesländer, die nicht ganzzahlig sind, eine neue Kategorie 17 
-# ("Mehrländerunternehmen")
+# Federal states
+# --------------
+# Create a new category '17 = mixed location firm' for non-integer federal states  after 
+# aggregation 
 length(which(data_all$bl!=round(data_all$bl,0))==TRUE)
 data_all$bl[data_all$bl!=round(data_all$bl,0)] <- 17
 
-# Schaffe für alle Gemeinden, die nicht ganzzahlig sind, die Kategorie '99999999'
+# Municipality
+# ------------
+# Create a new category '99999999 = mixed location firm' for non-integer municipality codes 
+# after aggregation
 length(which(data_all$ags_u_new!=round(data_all$ags_u_new,0))==TRUE)
 data_all$ags_u_new[data_all$ags_u_new!=round(data_all$ags_u_new,0)] <- 99999999
 
-# Wenn öffentliche Utilities bei der Eigentümerschaft Zahlen (inkl. Bruchzahlen) unter 2 haben,
-# besitzen sie mind. 1 Unternehmen, was mehrheitlich-öffentlich ist und werden daher als Gruppe
-# als mehrheitlich öffentlich behandelt.
+# Mixed ownership
+# ----------------
+# If a firm has mixed ownership values < 2, it must have at least one plant in mixed ownership
+# so that we will classify the whole firm as being in 'mixed ownership' 
 data_all$eigentuemer_new[is.na(data_all$eigentuemer)==FALSE & data_all$eigentuemer<2] <- 1
 data_all$eigentuemer_new[is.na(data_all$eigentuemer)==FALSE & data_all$eigentuemer==2] <- 2
 data_all$eigentuemer_new[is.na(data_all$eigentuemer)==TRUE] <- NA
 summary(as.factor(data_all$eigentuemer_new))
 
+# Fuel type
+# ---------
+Create a new category '15 = mixed fuels' for non-integer fuel types after aggregation
 # Schaffe für alle Hauptenergietraegergruppen, die nicht ganzzahlig sind, eine neue Kategorie 15
 # ("gemischte Hauptenergietraegergruppen")
 length(which(data_all$HETGruppen!=round(data_all$HETGruppen,0))==TRUE)
 data_all$HETGruppen[data_all$HETGruppen!=round(data_all$HETGruppen,0)] <- 15
 
-# Wenn die Utility an der TM070 oder TM066N teilgenommen hat, ist sie ein Stromnetzbertreiber.
-data_all$netzbetreiber <- ifelse((data_all$TM070_u>0 | data_all$TM066N_u>0),1,0)
 
-
-
-# Erstelle für alle Utilities das Eintritts- bzw. Austrittsjahr.
+# Generate for each utility their entry and exit year into the data set
+# ---------------------------------------------------------------------
 entry <- as.data.frame(aggregate(cbind("Eintrittsjahr"=data_all$Jahr)
                                  ,by=list("id"=data_all$id),min,na.rm=TRUE))
 exit <- as.data.frame(aggregate(cbind("Austrittsjahr"=data_all$Jahr)
@@ -745,66 +810,74 @@ data_all <- merge(data_all,entryexit,by=c("id"),all=TRUE)
 
 
 
-####################################################################################################
-##		            	2) Definition öffentlicher Unternehmen                                        ##
-####################################################################################################
+#================================================================================================
+# 5) Definition of a 'public firm'		            	                                   
+#================================================================================================
+
+# time stamp
+# ----------
 date()
 
-######################################################
-##  2.1 Anzahl der Utilities mit Jahresabschlüssen  ##
-######################################################
+#================================================================================================
+# 5.1 Number of matches with JAB survey 
+#================================================================================================
 
+# The survey 'Jahresabschluesse oeffentlicher Fonds, Einrichtungen und Unternehmen' collects 
+# information on all firms where public entities hold at least 50 percent of the shares/votes.
 
-# Wieviele Utilities mit allen Jahresabschlüssen stehen grundsätzlich zur Verfügung?
+# How many firms have matches with the JAB survey?
+# ------------------------------------------------
 addmargins(table(data_all$Jahr[data_all$jab==1]))
 
-# Wieviele Utilities mit teilweise Jahresabschlüssen stehen grundsätzlich zur Verfügung?
+# For how many firms do we have at least one plant with a match in the JAB survey?
+# --------------------------------------------------------------------------------
 addmargins(table(data_all$Jahr[data_all$jab>0 & data_all$jab!=1]))
 
 
-################################################################
-##    2.2 Interpolation der Zugehörigkeit öffentlich/privat   ##
-################################################################
 
 
-####################################################
-## 2.2.1 Kontinuität der JAB-Variable             ##
-####################################################
+#================================================================================================
+# 5.2 Interpolate public ownership
+#================================================================================================
 
-# Idee:
-# Wenn die Unternehmen in dem Jahr davor und danach JAB vorweisen können, setze sie auch in dem
-# Lückenjahr auf oeffentlich (public==1). Sollte dies nicht funktionieren, nimm als Annäherung nur 
-# den Status vom Vorjahr.
+#================================================================================================
+# 5.2.1 Continuity of participation in JAB survey             
+#================================================================================================
 
-# Algorithmus:
-# 1) Ziehe das Subset nur mit Beobachtungen aus dem jeweiligen Bundesland.
-# 2) Unternehmen, die überschrieben werden sollen, müssen 3 Bedingungen erfüllen:
-#    a) Im Lückenjahr liegen keine JAB vor.
-#    b) Im Jahr davor liegt ein JAB vor.
-#    c) Im Jahr danach liegt ein JAB vor.
-# 3) Verteile für jeden erfüllte Bedingung einen Punkt. Summiere die Punkte.
-#    Unternehmen, die alle 3 Bedingungen erfüllen, bekommen in der Dummyvariable eine 1 (vs. NA).
-# 4) Spiele die Dummyvariable an den Originaldatensatz auf Unternehmensebene an. Achtung: Die 
-#    fraglichen Unternehmen haben nicht nur im Lückenjahr, sondern auch in allen anderen Jahren 
-#    Dummy=1 stehen.
-# 5) Bei allen Unternehmen, die im /Lückenjahr/ Dummy!=NA haben, wird Public=1, bei allen anderen 
-#    unr und Jahren wird die alte Info aus der JAB-Variable genommen.
+# Idea:
+# -----
+# If a firm participated in the JAB survey in the previous and following year, it is very likely
+# that it is also a public firm in the current year despite a missing match.
 
-# * In Schritt 5 muss Dummy!=NA genommen werden, da Dummy=1 zu falschen Ergebnissen führt.
+
+# Algorithm:
+# ----------
+# 1) Build a subset with all observations of a federal state.
+# 2) Firms whose ownership status is to be replaced shall fulfill 3 conditions:
+#    a) There is no match with the JAB survey in the current year.
+#    b) There is a match with the JAB survey in the previous year.
+#    c) There is a match with the JAB survey in the following year.
+# 3) Firms that fulfill all three conditions have the auxiliary binary variable set to 1 (vs. NA).
+# 4) Merge the binary variable to the original data set. Note: The relevant firms will have the
+#    binary variable set to 1 for all years where they are observed.
+# 5) Set public = 1 for all firm whose binary variable != NA in the 'missing' year. For all other 
+#    firms and years, keep information from original JAB variable. 
+#    Notes: Use binary variable != NA since binary == 1 leads to wrong results.
+
 
 # Niedersachsen 2005
+# ------------------
 data_ns <- subset(data_all, bl==3, select=c(id,Jahr,bl,jab))
-# Unternehmen, die einen neuen JAB-Wert erhalten, müssen 3 Bedingungen erfüllen:
 data_ns$id1[data_ns$Jahr==2005 & data_ns$jab==0] <- 1
 data_ns$id1[data_ns$Jahr==2004 & data_ns$jab==1] <- 1
 data1 <- aggregate(cbind("id_ns"=id1) ~ id, data_ns,sum)
-# Normalize to 1.
 data1$id_ns <- ifelse(data1$id_ns==2,1,NA)
 data_all_new <- merge(data_all,data1,by=c("id"),all.x=TRUE)
 data_all_new$public <- ifelse(is.na(data_all_new$id_ns)==FALSE & data_all_new$Jahr==2005,1,data_all_new$jab)
 
 
 # Hessen 2003
+# -----------
 data_he <- subset(data_all, bl==6, select=c(id,Jahr,bl,jab))
 data_he$id1[data_he$Jahr==2003 & data_he$jab==0] <- 1
 data_he$id1[data_he$Jahr==2005 & data_he$jab==1] <- 1
@@ -815,6 +888,7 @@ data_all_new$public <- ifelse(is.na(data_all_new$id_he1)==FALSE & data_all_new$J
                             ,data_all_new$public)
 
 # Hessen 2004
+# -----------
 data_he$id2[data_he$Jahr==2004 & data_he$jab==0] <- 1
 data_he$id2[data_he$Jahr==2005 & data_he$jab==1] <- 1
 data1 <- aggregate(cbind("id_he2"=id2) ~ id, data_he,sum)
@@ -825,6 +899,7 @@ data_all_new$public <- ifelse(is.na(data_all_new$id_he2)==FALSE & data_all_new$J
 
 
 # Hessen 2006
+# -----------
 data_he$id3[data_he$Jahr==2006 & data_he$jab==0] <- 1
 data_he$id3[data_he$Jahr==2005 & data_he$jab==1] <- 1
 data1 <- aggregate(cbind("id_he3"=id3) ~ id, data_he,sum)
@@ -835,6 +910,7 @@ data_all_new$public <- ifelse(is.na(data_all_new$id_he3)==FALSE & data_all_new$J
 
 
 # Hessen 2007
+# -----------
 data_he$id4[data_he$Jahr==2007 & data_he$jab==0] <- 1
 data_he$id4[data_he$Jahr==2005 & data_he$jab==1] <- 1
 data1 <- aggregate(cbind("id_he4"=id4) ~ id, data_he,sum)
@@ -845,6 +921,7 @@ data_all_new$public <- ifelse(is.na(data_all_new$id_he4)==FALSE & data_all_new$J
 
 
 # Thüringen 2006
+# --------------
 data_th <- subset(data_all,bl==16, select=c(id,Jahr,bl,jab))
 data_th$id1[data_th$Jahr==2006 & data_th$jab==0] <- 1
 data_th$id1[data_th$Jahr==2005 & data_th$jab==1] <- 1
@@ -857,6 +934,7 @@ data_all_new$public <- ifelse(is.na(data_all_new$id_th)==FALSE & data_all_new$Ja
 
 
 # Schleswig-Holstein
+# ------------------
 data_sh <- subset(data_all, bl==1, select=c(id,Jahr,bl,jab))
 data_sh$id1[data_sh$Jahr==2003 & data_sh$jab==0] <- 1
 data_sh$id1[data_sh$Jahr==2004 & data_sh$jab==1] <- 1
@@ -867,77 +945,108 @@ data_all_new$public <- ifelse(is.na(data_all_new$id_sh)==FALSE & data_all_new$Ja
                             ,data_all_new$public)
 
 
-# Setze ferner alle Unternehmen, die Eigenbetriebe sind, automatisch auf 'public'.
+#================================================================================================
+# 5.2.2 Legal form 'Eigenbetrieb'            
+#================================================================================================
+
+# Only fully publicly-owned utilities can choose the legal form 'Eigenbetrieb'. Hence all firms 
+# that report there legal status to be 'Eigenbetrieb' must be (fully) public.
+
+# Declare all utilities with the legal form 'Eigenbetrieb' to be public
+# ---------------------------------------------------------------------
 data_all_new$public <- ifelse(is.na(data_all_new$Rechtsform_Zahl)==FALSE 
                             & data_all_new$Rechtsform_Zahl==8,1,data_all_new$public)
 
-# Gab es Änderungen in den JAB-Fallzahlen?
+
+#================================================================================================
+# 5.2.3 'urs public'variable
+#================================================================================================
+
+# For the years 2013 and 2014, additionally use information from the company register (URS) on
+# public ownership 
+
+# Set all utilities with urs_public>0 to public
+# ---------------------------------------------
+data_all_new$public <- ifelse(is.na(data_all_new$urs_public)==FALSE & data_all_new$urs_public>0,1
+                              ,data_all_new$public)
+
+
+#================================================================================================
+# 5.2.4 Check: Result of interpolation          
+#================================================================================================
+
+# Check result of interpolation ('jab' (old variable ) -> 'public' (new variable))
+# ---------------------------------------------------------------------------------
 summary(as.factor(data_all_new$jab))
 summary(as.factor(data_all_new$public))
 
-# Wie verteilen sich die öffentlichen Unternehmen jetzt auf die BL?
+# Table public utilities by federal state
+# ---------------------------------------
 addmargins(table(data_all_new$bl[data_all_new$public>0],data_all_new$Jahr[data_all_new$public>0]
                  ,useNA="ifany"))
 
-# Zum Vergleich: Wie verteilen sich die privaten Unternehmen auf die BL?
+# Table private utilities by federal state
+# -----------------------------------------
 addmargins(table(data_all_new$bl[data_all_new$public==0],data_all_new$Jahr[data_all_new$public==0]
                  ,useNA="ifany"))
 
 
+# time stamp
 date()
 
 
-#######################################
-## 2.2.2 'urs public' Variable       ##
-#######################################
 
-# Nutze für die Jahre 2013 und 2014 auch die Informationen aus der 'urs_public'-Variable.
-data_all_new$public <- ifelse(is.na(data_all_new$urs_public)==FALSE & data_all_new$urs_public>0,1
-                              ,data_all_new$public)
-
-# Wie verteilen sich die öffentlichen Unternehmen jetzt auf die BL?
-addmargins(table(data_all_new$bl[data_all_new$public>0],data_all_new$Jahr[data_all_new$public>0]
-                 ,useNA="ifany"))
+#================================================================================================
+# 5.3 Interpolation distinction between full/mixed ownership
+#================================================================================================
 
 
-##################################################################################
-##    2.3 Interpolation der Mehrheitsverhältnisse in öffentlichen Unternehmen   ##
-##################################################################################
+# Compute the average of the categorical variable characterising full/mixed ownership. Use the
+# min function, i.e. assume if a firm is in mixed ownership during the years where its status is
+# observed it will also be in mixed ownership during the years where the information is missing.
 
-# Interpoliere auch die Information zu den Mehrheitsverhältnissen.
-
-# Bilde für jede Utility den Durchschnitt über alle Jahre der Mehrheitsverhältnisse. Nutze dazu
-# die min-Funktion, d.h. ist die Utility einmal in mehrheitlicher Hand, nimm an, dass es auch in
-# der Lücke in mehrheitlicher Hand war.
+# Apply min function
+# ------------------
 data3 <- aggregate(cbind("eigner_neu"=data_all_new$eigentuemer_new),by=list("id"=data_all_new$id)
                    ,min,na.rm=TRUE)
 data3$eigner_neu[data3$eigner_neu==Inf] <- NA
-# Spiele diese zeitinvariante Information über die Mehrheitsverhältnisse an den Datensatz auf
-# Utilityebene an.
+
+# Merge the time-invariant information on full/mixed ownership due to the original data set
+# -----------------------------------------------------------------------------------------
 data_all_new <- merge(data_all_new,data3,by=c("id"),all.x=TRUE)
-# Bilde eine neue Variable, wo die Mehrheitsverhältnisse von öffentlichen Firmen in den Jahren, wo
-# sie nicht vorliegen, durch die zeitinvariante Variable ersetzt werden.
+
+# Generate a new variable 'eigentuemer2'
+# --------------------------------------
+# Replaces the information on full/mixed ownership in the years w/o status info with the 
+# time-invariant variable
 data_all_new$eigentuemer2 <- ifelse(data_all_new$public==1 & is.na(data_all_new$eigentuemer_new)==TRUE
                                     ,data_all_new$eigner_neu,data_all_new$eigentuemer_new)
 
-# Vergleiche die Fallzahlen vorher und nachher.
+# Compare frequencies before and after interpolation
+# --------------------------------------------------
 addmargins(table(data_all_new$eigentuemer_new,data_all_new$Jahr,useNA="ifany"))
 addmargins(table(data_all_new$eigentuemer2,data_all_new$Jahr,useNA="ifany"))
 
 
-# Definiere öffentliche Utilities nun über public anstelle jab.
+#================================================================================================
+# 5.4 Define subset of public firms for the analysis
+#================================================================================================
+
+# Drop private firms
+# ------------------
 data_public <- subset(data_all_new, public==1)
 
 
-#######################################
-##  2.3 Balanced Panel?              ##
-#######################################
+#================================================================================================
+# 6) Balanced Panel?
+#================================================================================================
 
 
-# Eintritt & Austritt ins Panel data_public
+# entry and exit into sample 'data_public'
 # -----------------------------------------
-# Eintrittsjahr=erstmalige Beobachtungen im Gesamtpanel data_all
-# Baseyear=erstmalige Beobachtung im Panel data_public. 
+# Eintrittsjahr = first-time observation in full panel 'data_all'
+# Baseyear = first-time observation in public panel 'data_public'.
+
 entry_public <- as.data.frame(aggregate(cbind("baseyear"=data_public$Jahr)
                                         ,by=list("id"=data_public$id),min,na.rm=TRUE))
 exit_public <- as.data.frame(aggregate(cbind("lastyear"=data_public$Jahr)
@@ -950,165 +1059,77 @@ cbind("Entry"=addmargins(table(data_public$baseyear,useNA="ifany"))
 
 
 
-# Anzahl der beobachteten Jahre
-# -----------------------------
-# Zähle für jede Utility Anzahl der Jahre, in denen es beobachtet wird. 
-# Erstelle Häufigkeitstabelle für jede Beobachtungsdauer und die Anzahl der Utilities, die in 
-# diese Kategorie fallen.
+# Number of years observed
+# ------------------------
+# Count the number of years for each utility. Subsequently, table frequencies.
 Dauer <- aggregate(cbind("Dauer"=data_public$Jahr),by=list("id"=data_public$id),length)
 table(as.factor(Dauer$Dauer),dnn="Anzahl Jahre")
 data_public <- merge(data_public,Dauer,by=c("id"),all.x=TRUE)
 
 
-
-# Wieviele öffentliche Utilities werden nicht durchgängig beobachtet?
-# -------------------------------------------------------------------
-# (Unternehmen fehlt grundsätzlich im Sample oder JAB auch trotz Interpolation nicht verfügbar)
+# How many public firms are not continuosly observed?
+# ---------------------------------------------------
+# Notes: This means that either the firm is not in the main sample or the public status
+# is not available despite the interpolation procedures applied.
 data_public$Lueckenjahre <- (data_public$lastyear-data_public$baseyear+1-data_public$Dauer)
 summary(as.factor(data_public$Lueckenjahre))
 
-# Entferne alle Utilities, die Lückenjahre aufweisen, d.h. für die nicht kontinuierlich zwischen
-# Eintrittsjahr und Austrittsjahr Beobachtungen vorliegen.
+# Drop all firms which are not continuously observed
+# --------------------------------------------------
 data_public <- subset(data_public,Lueckenjahre==0)
 addmargins(table(data_public$Jahr))
 
 
-###################################################################
-## 3.1) Erstellen der Input- und Output-Variablen                ##
-###################################################################
+#================================================================================================
+# 7) Generate input and output variables for the production function estimation
+#================================================================================================
 
 date()
 
 
-# #################################################################################
-# ##  3.1.1 Berechnung des Kapitalstocks mit jährlichem Anlagevermögen           ##
-# #################################################################################
-#
-# # Nutze als eine Möglichkeit direkt die Angaben aus den Jahresabschlüssen bzgl. des Anlagevermögens.
-#
-# # K_t_end = EF24_9905-EF24_9911 (AV zum Ende des Jahres - AfA-Stand zum Ende des Jahres)
-# data_public$K_end <- data_public$EF24_9905 - data_public$EF24_9911
-# data_public$K_end[data_public$K_end==0] <- NA
-#
-#
-# #####################################################
-# ##  3.1.1.1 Imputation fehlender Werte             ##
-# #####################################################
-#
-# # Bei wievielen Utilities fehlen die Angaben (NA)?
-# dstat(data_public$K_end/10^6,d=2)
-#
-# # Bilde das Subset der Utilities, für die Werte imputiert werden müssen.
-# data4 <- subset(data_public, is.na(data_public$K_end)==TRUE)
-# data5 <-sapply(unique(data4$id),function(x)which(data_public[,"id"]==x))
-# data5 <-data_public[unlist(data5),]
-#
-# # Berechne die jährliche Wachstumsrate des Anlagevermögens in den restlichen Jahren.
-# # K_growth_t = (K_t+1_end - K_t_end)/K_t_end
-# # Algorithmus: Für jede Utility und jedes Jahr wird überprüft, ob in diesem und im darauffolgenden
-# # Jahr K_t vorliegt. Wenn ja, wird die Wachstumrate zum nächsten Jahr mit der oben angegebenen
-# # Formel berechnet (sonst NA).
-# for (i in as.factor(data5$id))
-# {
-#   for (j in seq(2003,2013))
-#   {ifelse(data5$id==i & data5$Jahr==j & is.na(data5$K_end[data5$id==i & data5$Jahr==j])==FALSE
-#           & is.na(data5$K_end[data5$id==i & data5$Jahr==j+1])==FALSE
-#           ,data5$capgrowth[data5$id==i & data5$Jahr==j] <-  (data5$K_end[data5$id==i & data5$Jahr==j+1]-data5$K_end[data5$id==i & data5$Jahr==j])/data5$K_end[data5$id==i & data5$Jahr==j]
-#           ,NA)
-#   }}
-#
-# dstat(data5$capgrowth,d=2)
-#
-# # Berechne für jede Utility die durchschnittliche Wachstumsrate g über alle Jahre.
-# capgrowth_av <- aggregate(cbind("capgrowth_av"=data5$capgrowth),by=list("id"=data5$id),mean
-#                           ,na.rm=TRUE)
-# data5 <- merge(data5,capgrowth_av,by="id")
-# dstat(data5$capgrowth_av,d=2)
-#
-# # Imputiere nun die fehlenden Angaben als lineare Interpolation: K_t+k = (1+g)^k*K_t.
-# # Algorithmus: Überprüfe für jede Utility und jedes Jahr, ob im derzeitigen Jahr die Angaben K_t
-# # fehlen. Wenn die Angaben in einem der Folgejahre (K_t+k) verfügbar sind, imputiere K_t mithilfe
-# # der Wachstumsrate g in der oben angegebenen Formel.
-#
-# for (i in as.factor(data5$id)){
-#   for (j in seq(2003,2013)){
-#     for (k in seq(1,11)){
-#       ifelse(data5$id==i & data5$Jahr==j & is.na(data5$K_end[data5$id==i & data5$Jahr==j])==TRUE
-#              & is.na(data5$K_end[data5$id==i & data5$Jahr==j+k])==FALSE
-#              ,data5$cap_new[data5$id==i & data5$Jahr==j] <-  data5$K_end[data5$id==i & data5$Jahr==j+k]/(1+data5$capgrowth_av[data5$id==i & data5$Jahr==j])^k
-#              ,NA)
-#     }}}
-#
-# # Spiele die imputierten Werte an den Grunddatensatz an.
-# data_public <- merge(data_public,subset(data5,select=c(id,Jahr,cap_new)),by=c("id","Jahr")
-#                      ,all.x=TRUE)
-#
-# # Ersetze fehlende Werte -soweit möglich- durch die Imputation.
-# data_public$K_t <- ifelse(is.na(data_public$K_end)==FALSE
-#                           ,data_public$K_end,data_public$cap_new)
-#
-# dstat(data_public$K_t/10^6,d=2)
-#
-#
-#
-####################################
-## 3.1.1.2 Preisbereinigung       ##
-####################################
+#================================================================================================
+# 7.1 Capital stock
+#================================================================================================
+
+# Use the perpetual inventory method (PIM) to compute the capital stock based on the initial 
+# capital stock and current investments minus depreciation.
 
 
-# Preisbereinige K_t mit Erzeugerpreisindex der Investitionsgüterproduzenten.
-# Quelle: Destatis (2013) - Preise und Preisindizes für gewerbliche Produkte (Erzeugerpreise). S.27
-# Pfad: V:\projects\current\efficiency\02_KOMIED\04_paper_current\19_integrierte_unternehmen\01_data
-# ...\Statistisches Bundesamt (2013) - Preise und Preisindizes für gewerbliche Produkte.pdf
-# Basisjahr: 2010
-PI_invest <- cbind("Jahr"=seq(2003,2014)
-                   ,"PI_invest"=c(0.969,0.971,0.976,0.977,0.983,0.992,1,1,1.012,1.022,1.030,1.035))
-data_public <- merge(data_public,PI_invest,by=c("Jahr"),all.x=TRUE)
-data_public <- data_public[order(data_public$id,data_public$Jahr),]
-# data_public$K_t_defl <- data_public$K_t/data_public$PI_invest
-# dstat(data_public$K_t_defl/10^6,2)
-#
-# # Bereinige zum Vergleich auch die Ursprungsvariable K_t_end für die Sensitivitätsanalse ohne
-# # imputierte Werte.
-# data_public$K_end_defl <- data_public$K_end/data_public$PI_invest
+#================================================================================================
+# 7.1.1 Initial capital stock
+#================================================================================================
 
-
-date()
-
-
-#####################################################
-##  3.1.2 Berechnung des Kapitalstocks mit PIM     ##
-#####################################################
-
-# Siehe Michas Präsentation vom 4.12.2014 beim KOMIED-Workshop.
-
-###################################################
-##  3.1.2.1 Imputation fehlender Werte ex-ante   ##
-###################################################
-
-# Initial capital K0
-# ------------------
+# Definition of initial capital stock (K_0)
+# -----------------------------------------
 # K_0 = K_start[Baseyear]
-# K_start = EF24_9901-EF24_9906 (AV zu Beginn des Jahres - AfA-Stand zu Beginn des Jahres)
+# K_start = EF24_9901-EF24_9906 ('assets at the beginning of the year' - 'depreciation at the 
+# beginning of year')
 
-# Berechne K_start.
+
+# Calculate K_start
+# -----------------
 data_public$K_start <- data_public$EF24_9901 - data_public$EF24_9906
 data_public$K_start[data_public$K_start==0 | is.nan(data_public$K_start)==TRUE] <- NA
 
-# Bei wievielen Utilities fehlen die Angaben (NA)?
+
+# For how many firm-year observations is the information missing?
+# ---------------------------------------------------------------
 dstat(data_public$K_start/10^6,d=2)
 
-# Bilde das Subset der Utilities, für die Werte imputiert werden müssen.
+
+# Build the subset of firm-year observations for which values have to be imputed
+# ------------------------------------------------------------------------------
 data8 <- subset(data_public, is.na(data_public$K_start)==TRUE)
 data9 <-sapply(unique(data8$id),function(x)which(data_public[,"id"]==x))
 data9 <-data_public[unlist(data9),]
 
 
-# Berechne die jährliche Wachstumsrate des Anlagevermögens in den restlichen Jahren.
+# Calculate the growth rate of assets in the remaining years
+# ----------------------------------------------------------
 # K_growth_t = (K_t+1_start - K_t_start)/K_t_start
-# Algorithmus: Für jede Utility und jedes Jahr wird überprüft, ob in diesem und im darauffolgenden
-# Jahr K_t_start vorliegt. Wenn ja, wird die Wachstumrate zum nächsten Jahr mit der oben angegebenen
-# Formel berechnet (sonst NA).
+# Idea: Checks for each utility whether in the current and next year information on tangible
+# assets are available. If so, the growth rate is calculated, otherwise left NA.
+
 for (i in levels(as.factor(data9$id)))
 {
   for (j in seq(2003,max(unique(data9$Jahr))-1))
@@ -1119,7 +1140,9 @@ for (i in levels(as.factor(data9$id)))
   }}
 dstat(data9$capgrowth,d=2)
 
-# Berechne für jede Utility die durchschnittliche Wachstumsrate g über alle Jahre.
+
+# Next, calculate average growth rate g over all years (per utility)
+# ------------------------------------------------------------------
 capgrowth_av <- aggregate(cbind("capgrowth_av"=data9$capgrowth),by=list("id"=data9$id),mean
                           ,na.rm=TRUE)
 data9 <- merge(data9,capgrowth_av,by="id")
@@ -1127,11 +1150,13 @@ dstat(data9$capgrowth_av,d=2)
 
 date()
 
+# Impute missing information on K_start with linear interpolation
+# ---------------------------------------------------------------
+# K_t+k = (1+g)^k*K_t
+# Idea: Checks for each firm-year observation whether information on K_start is available.
+# If not, but if K_start is available in one of the following years, impute current K_start using
+# the average growth rate as stated in the formula.
 
-# Imputiere nun die fehlenden Angaben als lineare Interpolation: K_t+k = (1+g)^k*K_t.
-# Algorithmus: Überprüfe für jede Utility und jedes Jahr, ob im derzeitigen Jahr die Angaben K_t
-# fehlen. Wenn die Angaben in einem der Folgejahre (K_t+k) verfügbar sind, imputiere K_t mithilfe
-# der Wachstumsrate g in der oben angegebenen Formel.
 data9$cap_new3 <- NA
 date()
 for (i in levels(as.factor(data9$id))){
@@ -1146,37 +1171,41 @@ for (i in levels(as.factor(data9$id))){
 date()
 
 
-# Spiele die imputierten Werte an den Grunddatensatz an.
+# Merge imputed values to original data set
+# -----------------------------------------
 data_public <- merge(data_public,subset(data9,select=c(id,Jahr,cap_new3)),by=c("id","Jahr"),all.x=TRUE)
 
-# Ersetze fehlende Werte -soweit möglich- durch die Imputation.
+# Replace missing values - if possible - by imputed values
+# --------------------------------------------------------
 data_public$K_start_new <- ifelse(is.na(data_public$K_start)==FALSE,data_public$K_start,data_public$cap_new3)
 dstat(data_public$K_start_new/10^6,d=2)
 
-# Korrektur unplausibler Werte
+# Correct for implausible values
+# ------------------------------
 data_public$K_start_new[data_public$K_start_new>max(data_public$K_start,na.rm=TRUE)] <- NA
 data_public$K_start_new[data_public$K_start_new<min(data_public$K_start,na.rm=TRUE)] <- NA
 
+# Deflate values with PPI for investment goods
+# --------------------------------------------
 data_public$K_start_new_defl <- data_public$K_start_new/data_public$PI_invest
 dstat(data_public$K_start_new_defl/10^6,2)
 
 
-
-###################################################
-##  3.1.2.2 Erstelle die Komponenten der PIM     ##
-###################################################
-
-
-# Berechne K_0.
+# Compute initial capital stock
+# ----------------------------
 for (i in as.factor(data_public$id))
 {data_public$K0[data_public$id==i] <- data_public$K_start_new_defl[data_public$id==i & data_public$Jahr==data_public$baseyear]}
 dstat(data_public$K0/10^6,2)
 
 
+#================================================================================================
+# 7.1.2 Depreciation
+#================================================================================================
 
-# Depreciation rate (whole period average)
-# ----------------------------------------
-# d=EF24_9907/EF24_9901 (AfA im laufenden Jahr/AV zu Beginn des Jahres)
+
+# Depreciation rate per year
+# --------------------------
+# d=EF24_9907/EF24_9901 (depreciation in current year/assets at beginning of the year)
 data_public$depreciation <- data_public$EF24_9907/data_public$EF24_9901
 data_public$depreciation[data_public$depreciation==Inf] <- NA
 data_public$depreciation[is.nan(data_public$depreciation)==TRUE] <- NA
@@ -1185,49 +1214,51 @@ data_public$depreciation[data_public$depreciation>1] <- NA
 
 dstat(data_public$depreciation,3)
 
-# Erstelle pro Utility den Mittelwert über alle Jahre (2003-2014)
+
+# Compute average over all years (2003-2014) for each utility
+# -----------------------------------------------------------
 for (i in as.factor(data_public$id))
 {data_public$av_depreciation[data_public$id==i] <- mean(data_public$depreciation[data_public$id==i]
                                             ,na.rm=TRUE)}
 dstat(data_public$av_depreciation,3)
 
 
-# Yearly depreciation (deflated with investment index)
-# ----------------------------------------------------
-# AfA =EF24_9907/PI_t
-data_public$afa_defl <- data_public$EF24_9907/data_public$PI_invest
-dstat(data_public$afa_defl/10^6,d=2)
-# Setze alle Nullen auf NA
-data_public$afa_defl[data_public$afa_defl==0] <- NA
-dstat(data_public$afa_defl/10^6,d=2)
+
+#================================================================================================
+# 7.1.3 Investments
+#================================================================================================
 
 
 
 # Yearly investment (deflated with investment index)
 # --------------------------------------------------
-# I_t = EF24_9905-EF24_9901 (AV am Ende des Jahres - AV zu Beginn des Jahres)
-# Nutze die Angaben aus der IVE zum Bruttozugang an Sachanlagen, wenn in den JAB Null oder NA
-# angegeben wurde.
+# I_t = EF24_9905-EF24_9901 (assets at the end of the year - assets at the beginning of the year)
+# Use information on investments into tangible assets from the investment survey if the 
+# information is missing in the JAB survey.
 data_public$investment <- data_public$EF24_9905-data_public$EF24_9901
 data_public$investment <- ifelse((data_public$investment==0 | is.na(data_public$investment)==TRUE)
                            & is.na(data_public$UI_Code4001)==FALSE
                            ,data_public$UI_Code4001
                            ,data_public$investment)
 dstat(data_public$investment/10^6,2)
+
+
+# Deflate with PPI for investment goods
+# -------------------------------------
 data_public$invest_defl <- data_public$investment/data_public$PI_invest
 dstat(data_public$invest_defl/10^6,2)
 
 
 
 
-#######################################################
-##  3.1.2.3 Schätzung des Kapitalstocks mit PIM      ##
-#######################################################
+#================================================================================================
+# 7.1.4 Estimate capital stock with PIM
+#================================================================================================
 
 
 
 # -----------------------------------------------------------------------------------------
-# Formel:
+# Formula:
 # K_t+1 = (1-d)*K_t + I_t+1/PI_t+1
 # ------------------------------------------------------------------------------------------
 
@@ -1252,34 +1283,10 @@ dstat(data_public$K_adj/10^6,d=2)
 
 
 
-# ############################################################################
-# ##  3.1.2.5 Vergleich der beiden Methoden zur Kapitalstockberechnung      ##
-# ############################################################################
-#
-#
-# # Wie hoch ist die Korrelation zwischen dem bereinigten K_t_end und dem bereinigten K_adj?
-# cor(data_public$K_end_defl,data_public$K_adj,use="complete.obs")
-#
-# # Wie ist das Verhältnis zwischen bereinigtem K_t_end und bereinigtem K_adj?
-# dstat(ifelse(data_public$K_adj!=0,data_public$K_end_defl/data_public$K_adj,NA),d=2)
-#
-# # Wie hoch ist die Korrelation zwischen dem imputierten K_t und dem bereinigten K_adj?
-# cor(data_public$K_t_defl,data_public$K_adj,use="complete.obs")
-#
-# # Wie ist das Verhältnis zwischen imputiertem K_t und dem bereinigten K_adj?
-# dstat(ifelse(data_public$K_adj!=0,data_public$K_t_defl/data_public$K_adj,NA),d=2)
-#
-#
-#
-# # Kontrolle der Imputation:
-# # Wenn der Kapitalstock aus der PIM-Berechnung verwendet wird, sollten die imputierten Werte
-# # entfernt werden, bei denen K_t_defl und K_adj zu weit voneinander abweichen.
 
-
-
-#############################################################
-##  3.3 Labour (Arbeitnehmer/Vollzeitäquivalente)          ##
-#############################################################
+#================================================================================================
+# 7.2 Labour (Employees, full time equivalents
+#================================================================================================
 
 # Anzahl der Beschäftigten KSE
 dstat(data_public$UK_Code1501)
