@@ -1081,10 +1081,22 @@ addmargins(table(data_public$Jahr))
 
 
 #================================================================================================
-# 7) Generate input and output variables for the production function estimation
+# 7) Generate input variables for the production function estimation
 #================================================================================================
 
 date()
+
+# Notes: Most of the variables are available both in the KSE survey (Kostenstrukturerhebung bei 
+# Unternehmen der Energie- und Wasserversorgung, sowie bei Unternehmen zur Abwasser- und Abfall-
+# entsorgung und Beseitigung von Umweltverschmutzungen) and the JAB survey (Jahresabschluesse 
+# oeffentlicher Fonds, Einrichtungen und Unternehmen). 
+
+# The former contains balance sheet data information for both private and public firms, while
+# the latter contains balance sheet data for public firms only.
+
+# Most of the time, we use the information from the KSE survey. If data is missing, we use the
+# information from the JAB survey. The only exception is data on the capital stock, this 
+# information is only available in the JAB survey.
 
 
 #================================================================================================
@@ -1285,134 +1297,117 @@ dstat(data_public$K_adj/10^6,d=2)
 
 
 #================================================================================================
-# 7.2 Labour (Employees, full time equivalents
+# 7.2 Labour (Employees, FTE)
 #================================================================================================
 
-# Anzahl der Beschäftigten KSE
+# Number of employees in KSE survey
+# ---------------------------------
 dstat(data_public$UK_Code1501)
 
-# Anzahl der Beschäftigten JAB
+# Number of employees in JAB survey
+# ---------------------------------
 dstat(data_public$EF24_0180)
 
-# Korrelation zwischen der KSE-Variable und der JAB-Variable
+# Correlation between KSE variable and JAB variable
+# -------------------------------------------------
 cor(data_public$UK_Code1501,data_public$EF24_0180,use="complete.obs")
 data_public$cor_labour <- ifelse(data_public$EF24_0180!=0,data_public$UK_Code1501/data_public$EF24_0180,NA)
 dstat(data_public$cor_labour,d=2)
 
-# Nimm grundsätzlich die Beschäftigtenzahl aus der KSE und nur, wenn diese nicht verfügbar ist, aus
-# den JAB.
+# Use employees from KSE data - if not available, use employees from JAB survey
+# ----------------------------------------------------------------------------- 
 data_public$beschaeftigte <- ifelse(is.na(data_public$UK_Code1501)==FALSE 
                                     & data_public$UK_Code1501>0,data_public$UK_Code1501
                                     ,data_public$EF24_0180)
 dstat(data_public$beschaeftigte)
 
 
+#================================================================================================
+# 7.3 Hourly wages
+#================================================================================================
 
-#############################################################
-##  3.4 Stundenlöhne                                       ##
-#############################################################
 
-# Achtung: Unterschied zwischen Arbeitskosten und Bruttolöhnen:
-# Arbeitskosten = Bruttolöhne + Lohnnebenkosten des AG (sein Beitrag zur Sozialversicherung)
-# Im Paper wird genaugenommen mit Arbeitskosten gerechnet, nicht mir Bruttolöhnen.
-
-# Arbeitskosten KSE (Entgelte + gesetzliche Sozialkosten + sonstige Sozialkosten)
+# Compute labour costs in KSE survey 
+# ----------------------------------
+# labour costs = wage bill + mandatory social contributions + other social contributions
 data_public$bruttolohn_KSE <- (data_public$UK_Code5001 + data_public$UK_Code5201 
                                + ifelse(is.na(data_public$UK_Code5301)==FALSE
                                         ,data_public$UK_Code5301,0))
 dstat(data_public$bruttolohn_KSE/10^6,d=2)
 
-# Arbeitskosten JAB
+# Compute labour costs in JAB survey 
+# ----------------------------------
 data_public$bruttolohn_JAB <- data_public$EF24_0426 + data_public$EF24_0427
 dstat(data_public$bruttolohn_JAB/10^6,d=2)
 
-# Korrelation zwischen der KSE-Variable und der JAB-Variable
+# Correlation between KSE variable and JAB variable
+# -------------------------------------------------
 cor(data_public$bruttolohn_KSE,data_public$bruttolohn_JAB,use="complete.obs")
 data_public$cor_lohn <- ifelse(data_public$bruttolohn_JAB!=0,data_public$bruttolohn_KSE/data_public$bruttolohn_JAB,NA)
 dstat(data_public$cor_lohn,d=2)
 
 
-# Nimm grundsätzlich die Arbeitskosten aus der KSE und nur, wenn diese nicht verfügbar ist, aus den 
-# JAB.
+# Use labour costs from KSE data - if not available, use labour costs from JAB survey
+# ----------------------------------------------------------------------------------- 
 data_public$bruttolohn1 <- ifelse(is.na(data_public$bruttolohn_KSE)==FALSE 
                                   & data_public$bruttolohn_KSE>0
                                   ,data_public$bruttolohn_KSE
                                     ,data_public$bruttolohn_JAB)
 
 
-# Nutze zur Preisbereinigung den Mittelwert der Indizes der durchschnittlichen Arbeitskosten für
-# WZ-Zweig: Klasse D (Energieversorgung) und Klasse E (Wasserversorgung und Entsorgung)
-# Bereinigungsverfahren: Originalwerte
-# Basisjahr: 2010
-# Quelle: V:\projects\current\efficiency\02_KOMIED\04_paper_current\...
-# ...\19_integrierte_unternehmen\02_data\...
-# ...\GENESIS - Arbeitskostenindex nach WZ_1 digit_bereinigt.xls
-lohn_deflator <- cbind("Jahr"=seq(2003,2014),"lohn_deflation_index"=c(0.939,0.947,0.956,0.974,0.965
-                                                                      ,0.976,1.001,1,1.026,1.058
-                                                                      ,1.054,1.047))
-
-
-data_public <- merge(data_public,lohn_deflator,by="Jahr")
-data_public <- data_public[order(data_public$id,data_public$Jahr),]
-
-# Preisbereinige den Bruttolohn.
+# Deflate with German labour costs index
+# --------------------------------------
 data_public$bruttolohn <- data_public$bruttolohn1/data_public$lohn_deflation_index
 dstat(data_public$bruttolohn/10^6,d=2)
 
-# Berechne den durchschnittlichen Stundenlohn mithilfe der Stundenzahl aus der KSE.
+
+# Calculate average hourly wage using the number of hours worked from the KSE survey
+# ---------------------------------------------------------------------------------
 data_public$wage1 <- ifelse((data_public$bruttolohn>0&data_public$UK_Code1601>0)
                            ,data_public$bruttolohn/data_public$UK_Code1601,NA)
 dstat(data_public$wage1)
 
-# Falls der Stundenlohn nicht verfügbar ist, setze auf Durchschnitts-Lohn.
+
+# If the firm-level hourly wage is not available, use industry average
+# --------------------------------------------------------------------
 data_public$wage <- ifelse(is.na(data_public$wage1)==TRUE,mean(data_public$wage1,na.rm=TRUE),
                                 data_public$wage1)
 dstat(data_public$wage)
 
 
 
-#############################################################
-##  3.5 Fremde Dienstleistungen                            ##
-#############################################################
+#================================================================================================
+# 7.4 External services
+#================================================================================================
 
-# Q: Wie mit internen Dienstleistungen zwischen verbundenen Unternehmen umgehen? Evtl. in 
-# sensitivity-Analyse, da die meisten eh 1-Verbundunternehmen sind.
 
-# Angaben zu den Kosten fremder Dienstleistungen sind nur in der KSE eindeutig verfügbar.
-# In den JAB könnten sie eventuell in den "Aufwendungen für bezogene Leistungen" enthalten
-# sein, obwohl dazu vermutlich auch die fremdbezogene Energie- und Wasser gezählt wird.
-# Alternativ könnten die Angaben in "sonstigen betrieblichen Aufwendungen" enthalten sein.
-
-# Fremde DL in der KSE
+# Costs for external services in KSE survey
+# ------------------------------------------
 dstat(data_public$UK_Code5501/10^6,d=2)
 
-# Aufwendungen für bezogene Leistungen in den JAB
+
+# Costs for external services in JAB survey
+# ------------------------------------------
 dstat(data_public$EF24_0422/10^6,d=2)
 
-# Korrelation zwischen der KSE-Variable und der JAB-Variable
+
+# Correlation between KSE variable and JAB variable
+# -------------------------------------------------
 cor(data_public$UK_Code5501,data_public$EF24_0422,use="complete.obs")
 data_public$cor_fremdeDL <- ifelse(data_public$EF24_0422!=0,data_public$UK_Code5501/data_public$EF24_0422,NA)
 dstat(data_public$cor_fremdeDL,d=2)
 
-# Nimm grundsätzlich die fremden Dienstleistungen aus der KSE und nur, wenn diese nicht verfügbar 
-# sind, aus den JAB.
+
+# Use external services from KSE data - if not available, use external services from JAB survey
+# ---------------------------------------------------------------------------------------------
 data_public$fremdeDL1 <- ifelse(is.na(data_public$UK_Code5501)==FALSE 
                                     & data_public$UK_Code5501>0,data_public$UK_Code5501
                                     ,data_public$EF24_0422)
 
-# Nutze zur Preisbereinigung den Index der durchschnittlichen Arbeitskosten für
-# WZ-Zweig: Klasse M (freiberufliche, wissenschaftliche und technische Dienstleistungen)
-# Bereinigungsverfahren: Originalwerte
-# Basisjahr: 2010
-# Pfad: V:\projects\current\efficiency\02_KOMIED\04_paper_current\...
-# ...\19_integrierte_unternehmen\02_data\...
-# ...\GENESIS - Index Arbeitskosten nach WZ_1 digit_bereinigt.xls
-fdl_deflator <- cbind("Jahr"=seq(2003,2014)
-                      ,"fdl_deflation_index"=c(0.845,0.865,0.896,0.902,0.922,0.962,0.982,1,1.039
-                                               ,1.077,1.070,1.103))
 
 
-data_public <- merge(data_public,fdl_deflator,by="Jahr")
+# Deflate with PPI for NACE M (professional services)
+# ----------------------------------------------------
 data_public <- data_public[order(data_public$id,data_public$Jahr),]
 data_public$fremdeDL <- data_public$fremdeDL1/data_public$fdl_deflation_index
 dstat(data_public$fremdeDL/10^6,d=2)
@@ -1420,213 +1415,215 @@ dstat(data_public$fremdeDL/10^6,d=2)
 
 
 
-#############################################################
-##    3.6 Material  / Vorleistungen                        ##
-#############################################################
+#================================================================================================
+# 7.5 Material / Intermediates                        
+#================================================================================================
 
-# Materialaufwand KSE
+
+# Material expenditures KSE
+# --------------------------
 dstat(data_public$UK_Code3701/10^6,d=2)
 
-# Materialaufwand JAB
+
+# Material expenditures JAB
+# --------------------------
 dstat(data_public$EF24_0421/10^6,d=2)
 
-# Korrelation zwischen der KSE-Variable und der JAB-Variable
+
+# Correlation between KSE variable and JAB variable
+# -------------------------------------------------
 cor(data_public$UK_Code3701,data_public$EF24_0421,use="complete.obs")
 data_public$cor_mat <- ifelse(data_public$EF24_0421!=0,data_public$UK_Code3701/data_public$EF24_0421,NA)
 dstat(data_public$cor_mat,d=2)
 
-# Die JAB-Variable ist sehr viel größer als die KSE-Variable. Beziehe bei der KSE-Variable zum
-# Vergleich noch die Handelsware sowie die fremdbezogene Energie und Wasser ein.
+# The JAB variable is much larger than the KSE variable. Add 'commodities' and 'procured energy
+# and water' to 'material expenditure' in the survey. Obtains 'intermediates'.
+
 data_public$intermediates_KSE <- (data_public$UK_Code3701
                                   +ifelse(is.na(data_public$UK_Code4501)==FALSE
                                           ,data_public$UK_Code4501,0)
                                   +ifelse(is.na(data_public$UK_Code4901)==FALSE
                                           ,data_public$UK_Code4901,0))
 
-# Vergleiche nun erneut den KSE-Wert mit den JAB-Angaben.
+
+# Compare again the correlation between KSE variable and JAB variable
+# -------------------------------------------------------------------
 cor(data_public$intermediates_KSE,data_public$EF24_0421,use="complete.obs")
 data_public$cor_int <- ifelse(data_public$EF24_0421!=0,data_public$intermediates_KSE/data_public$EF24_0421,NA)
 dstat(data_public$cor_int,d=2)
 
-# Nimm grundsätzlich die intermediates aus der KSE und nur, wenn nicht verfügbar, den Material-
-# aufwand aus den JAB.
+
+# Use intermediates from KSE data - if not available, use intermediates from JAB survey
+# -------------------------------------------------------------------------------------
 data_public$intermediates1 <- ifelse(is.na(data_public$intermediates_KSE)==FALSE 
                                      & data_public$intermediates_KSE>0
                                      ,data_public$intermediates_KSE,data_public$EF24_0421)
 
 
-# Preisbereinige den Materialaufwand mit dem Erzeugerpreisindex für Vorleistungsgüter.
-# Quelle: Destatis (2013) - Preise und Preisindizes für gewerbliche Produkte (Erzeugerpreise). S.27
-# Pfad: V:\projects\current\efficiency\02_KOMIED\04_paper_current\19_integrierte_unternehmen\01_data
-# ...\Statistisches Bundesamt (2013) - Preise und Preisindizes für gewerbliche Produkte.pdf
-# Basisjahr: 2010
-int_deflator <- cbind("Jahr"=seq(2003,2014)
-                      ,"int_deflation_index"=c(0.866,0.89,0.915,0.951,0.987,1.013,0.96,1,1.056
-                                               ,1.058,1.046,1.035))
-data_public <- merge(data_public,int_deflator,by="Jahr")
-data_public <- data_public[order(data_public$id,data_public$Jahr),]
-
-# Preisbereinige die Kosten für Vorleistungen.
+# Deflate with German PPI for intermediate goods
+# ----------------------------------------------
 data_public$intermediates <- data_public$intermediates1/data_public$int_deflation_index
 dstat(data_public$intermediates/10^6,d=2)
 
 
 
-
-#############################################################
-##  3.1.8 F&E und Subventionen                             ##
-#############################################################
-
-
-# Ausgaben für FuE in Mio EUR
-dstat(data_public$UK_Code9001/10^6,d=2)
-
-# Arbeitnehmer in FuE
-dstat(data_public$UK_Code9101,d=2)
-
-# Subventionen in Mio EUR
-dstat(data_public$UK_Code7401/10^6,d=2)
+#================================================================================================
+# 8) Generate output variable for the production function estimation
+#================================================================================================
 
 
-
-
-
-#############################################################
-##  3.7 Output                                             ##
-#############################################################
-
-# Umsatzerlös KSE
+# Revenues in KSE survey
+# ----------------------
 dstat(data_public$UK_Code2501/10^6,d=2)
 
-# Umsatzerlös JAB
+
+# Revenues in JAB survey
+# ----------------------
 dstat(data_public$EF24_0401/10^6,d=2)
 
-# Korrelation zwischen der KSE-Variable und der JAB-Variable
+
+# Correlation between KSE variable and JAB variable
+# -------------------------------------------------
 cor(data_public$UK_Code2501,data_public$EF24_0401,use="complete.obs")
 data_public$cor_umsatz <- ifelse(data_public$EF24_0401!=0,data_public$UK_Code2501/data_public$EF24_0401,NA) 
 dstat(data_public$cor_umsatz,d=2)
 
-# Nimm grundsätzlich die Umsatzerlöse aus der KSE und nur, wenn nicht verfügbar, die Umsatzerlöse 
-# aus den JAB.
+
+# Use revenues from KSE survey - if not available, use revenues from JAB survey
+# ------------------------------------------------------------------------------
 data_public$revenues1 <- ifelse(is.na(data_public$UK_Code2501)==FALSE & data_public$UK_Code2501>0
                                      ,data_public$UK_Code2501,data_public$EF24_0401)
 dstat(data_public$revenues1/10^6,d=2)
 
 
-# Preisbereinige die Umsatzerlöse mit dem Erzeugerpreisindex von
-# WZ: 35/36 (Elektrischer Strom, gas, Fernwärme, Wasser)
-# Quelle: Destatis (2013) - Preise und Preisindizes für gewerbliche Produkte (Erzeugerpreise). S.27
-# Pfad: V:\projects\current\efficiency\02_KOMIED\04_paper_current\19_integrierte_unternehmen\01_data
-# ...\Statistisches Bundesamt (2013) - Preise und Preisindizes für gewerbliche Produkte.pdf
-# Basisjahr: 2010 
-rev_deflator <- cbind("Jahr"=seq(2003,2014)
-                      ,"rev_deflation_index"=c(0.750,0.758,0.847,0.982,0.967,1.085,1.026,1,1.082
-                                               ,1.102,1.103,1.075))
-data_public <- merge(data_public,rev_deflator,by="Jahr")
-data_public <- data_public[order(data_public$id,data_public$Jahr),]
-
-# Preisbereinige die Umsatzerlöse.
+# Deflate revenues with the German PPI of NACE 35/36 
+# --------------------------------------------------
 data_public$revenues <- data_public$revenues1/data_public$rev_deflation_index
 dstat(data_public$revenues/10^6,d=2)
 
 
-# Konstruiere die Output-Variable 'Value added' aus
-# Value added = Revenues - Intermediates
+# Compute value added = revenues - intermediates
+# -----------------------------------------------
 data_public$value_added <- data_public$revenues-data_public$intermediates
 dstat(data_public$value_added/10^6,d=2)
 
-# Konstruiere die Output-Variable 'Value-added' alternativ unter Abzug sämtlicher Steuern und 
-# Abgaben.
+
+# Compute value added = revenues - intermediates - taxes
+# ------------------------------------------------------
 data_public$value_added2 <- (data_public$revenues-data_public$intermediates
                              -ifelse(is.na(data_public$UK_Code6101)==FALSE,data_public$UK_Code6101
                                      ,0))
+
+
 dstat(data_public$value_added2/10^6,d=2)
 
 
-##############################################################
-##  3.8 Übersicht über die unit-Preise bei Stromlieferungen ##
-##############################################################
 
-# Berechne die Unit-Preise in den einzelnen Sparten.
+#================================================================================================
+# 9) Firm-level output prices for electricity
+#================================================================================================
 
-# Durchschnittspreis über alle Lieferungen an Letztverbraucher [EUR/kWh]
-# ------------------------------------------------------------
+
+# Firm-level unit price for electricity sold to end-consumers [EUR/kWh]
+# ---------------------------------------------------------------------
 data_public$p_LV <- data_public$U_ABS_EF1062/data_public$U_ABS_EF1061
 dstat(data_public$p_LV,d=2)
 
 
-# Durchschnittspreis über alle Lieferungen an EVU [EUR/kWh]
-# ------------------------------------------------------------
+# Firm-level unit price for electricity sold to other utilities [EUR/kWh]
+# ---------------------------------------------------------------------
 data_public$p_EVU <- data_public$U_ABS_EF1012_sum/data_public$U_ABS_EF1011_sum
 dstat(data_public$p_EVU,d=2)
 
 
-# Durchschnittspreis über alle Lieferungen an TK [EUR/kWh]
-# ------------------------------------------------------------
+# Firm-level unit price for electricity sold to small customers [EUR/kWh]
+# -----------------------------------------------------------------------
 data_public$p_TK <- data_public$U_ABS_EF1052/data_public$U_ABS_EF1051_sum
 dstat(data_public$p_TK,d=2)
 
-# Durchschnittspreis über alle Lieferungen an SK [EUR/kWh]
-# ------------------------------------------------------------
+
+# Firm-level unit price for electricity sold to large customers [EUR/kWh]
+# ---------------------------------------------------------------------
 data_public$p_SK <- data_public$U_ABS_EF1042_sum/data_public$U_ABS_EF1041_sum
 dstat(data_public$p_SK,d=2)
 
-# Durchschnittspreis über alle Lieferungen an HH [EUR/kWh]
-# ------------------------------------------------------------
+
+# Firm-level unit price for electricity sold to households [EUR/kWh]
+# ---------------------------------------------------------------------
 data_public$p_HH <- data_public$U_ABS_EF1082/data_public$U_ABS_EF1081
 dstat(data_public$p_HH,d=2)
 
-# Durchschnittspreis über alle Lieferungen an VG [EUR/kWh]
-# ------------------------------------------------------------
+
+# Firm-level unit price for electricity sold to manufacturing [EUR/kWh]
+# ---------------------------------------------------------------------
 data_public$p_VG <- data_public$U_ABS_EF1072/data_public$U_ABS_EF1071
 dstat(data_public$p_VG,d=2)
 
-# Durchschnittspreis über alle Lieferungen an sonstige LV [EUR/kWh]
-# -----------------------------------------------------------------
+
+# Firm-level unit price for electricity sold to other end-consumers [EUR/kWh]
+# ---------------------------------------------------------------------------
 data_public$p_BC <- data_public$U_ABS_EF1092/data_public$U_ABS_EF1091
 dstat(data_public$p_BC,d=2)
 
 
-# Durchschnittspreis über all Lieferungen (LV + EVU) [EUR/kWh]
-# ------------------------------------------------------------
-# Gesamterlöse LV + EVU / Gesamtmenge LV + EVU
+# Firm-level unit price for electricity sold to end-consumers and utilities [EUR/kWh]
+# -----------------------------------------------------------------------------------
 data_public$p_sa <- (data_public$U_ABS_EF1062+data_public$U_ABS_EF1012_sum)/(data_public$U_ABS_EF1061+data_public$U_ABS_EF1011_sum)
 dstat(data_public$p_sa,d=2)
 
 
-##############################################################
-##  3.8 Anteil der variablen Kosten an den Umsatzerlösen    ##
-##############################################################
+#================================================================================================
+# 10) Variable costs share in revenues
+#================================================================================================
 
+# labour costs share
+# -------------------
 data_public$wage_share <- data_public$bruttolohn/data_public$revenues
 dstat(data_public$wage_share,d=2)
+
+
+# external services cost share
+# ----------------------------
 data_public$service_share <- data_public$fremdeDL/data_public$revenues
 dstat(data_public$service_share,d=2)
+
+
+# intermediates cost share
+# ------------------------
 data_public$int_share <-  data_public$intermediates/data_public$revenues
 dstat(data_public$int_share,d=2)
 
-################################################################
-##  3.9 Kontrollvariablen                                     ##
-################################################################
 
-# Übersicht über die Rechtsformen (KSE)
+#================================================================================================
+# 11) Controls
+#================================================================================================
+
+# Legal form (KSE)
+# ----------------
 addmargins(table(data_public$Rechtsform_Zahl,data_public$Jahr,useNA="ifany"))
 
-# Übersicht über die Rechtsformen (JAB)
+# Legal form (JAB)
+# ----------------
 addmargins(table(data_public$EF6,data_public$Jahr,useNA="ifany"))
 
-# Übersicht über die Siedlungsstruktur
+# Settlement structure
+# ---------------------
 addmargins(table(data_public$Siedlung,data_public$Jahr,useNA="ifany"))
 
-# Übersicht über die Eigentümerstruktur
+# Mixed vs. full public ownership
+# -------------------------------
 addmargins(table(data_public$eigentuemer2,data_public$Jahr,useNA="ifany"))
 
-# Übersicht über die Hauptenergieträgergruppen
+# fuel type
+# ---------
 addmargins(table(data_public$HETGruppen[data_public$TM066K_b==1 | data_public$TM064_b==1]
                  ,data_public$Jahr[data_public$TM066K_b==1 | data_public$TM064_b==1],useNA="ifany"))
 
-# Übersicht über die variable EF7 (Regionalschlüssel)
+
+# location identifier: Regionalschluessel (JAB)
+# ---------------------------------------------
 addmargins(table(nchar(data_public$EF7),data_public$Jahr,useNA="ifany"))
+
 
 ####################################################################################################
 ##                  4) Auswahl des Subsets                                                        ##
