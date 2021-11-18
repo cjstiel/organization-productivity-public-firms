@@ -4,7 +4,7 @@
 #
 #================================================================================================
 #
-# Title: Corporatization, Remunicipalization, and Outsourcing: Public Firm Performance after  
+# Title: Remunicipalization, Corporatization, and Outsourcing: Public Firm Performance after  
 #        Reorganization
 # ------------------------------------------------------------------------------------------------
 #
@@ -319,28 +319,8 @@ clusterBootSE<-function(data,method,B){
 #=================================================================================================
 
 #=================================================================================================
-##  1.1 Inputs and outputs
+##  1.1 Logarithmization
 #=================================================================================================
-
-# Generate new output variable 'value_added3'
-# -------------------------------------------
-# revenues1 (nicht preisbereinigt) - intermediates (preisbereinigt mit Vorleistungsgüterindex)
-data$value_added3 <- data$revenues1 - data$intermediates
-cor(data$value_added2,data$value_added3,use="complete.obs")
-
-
-# Choose only firms with positive values in inputs and outputs (as we will logarithmise inputs and
-# outputs)
-# ------------------------------------------------------------------------------------------------
-data0 <- subset(data, fremdeDL>0 & K_adj>0 & bruttolohn>0 & value_added3>0)
-addmargins(table(data0$year))
-
-
-# Remove constant variables
-# -------------------------
-data0 <- subset(data0,select=-c(id_ns,id_he1,id_he2,id_he3,id_he4,id_th,id_sh,jab,public
-                                ,Lueckenjahre,out_labour,out_lohn,out_int,out_umsatz,out_p_LV
-                                ,out_p_EVU,out_p_TK,out_p_SK,out_p_HH,out_p_VG,out_p_BC,out_p_sa))
 
 # Logarithmize inputs and outputs
 # -------------------------------
@@ -362,52 +342,6 @@ data0$va_m <- log(data0$value_added2)-log(median(data0$value_added2,na.rm=TRUE))
 data0$va3_m <- log(data0$value_added3)-log(median(data0$value_added3,na.rm=TRUE))
 
 
-
-#=================================================================================================
-# 1.2 sector fixed effects
-#=================================================================================================
-
-# Industry fixed effects 
-# ----------------------
-data0$sa_EVU <- ifelse(is.na(data0$U_ABS_EF1011_sum)==FALSE & data0$U_ABS_EF1011_sum>0,1,0)
-data0$sa_TK <- ifelse(is.na(data0$U_ABS_EF1051_sum)==FALSE & data0$U_ABS_EF1051_sum>0,1,0)
-data0$sa_SK <- ifelse(is.na(data0$U_ABS_EF1041_sum)==FALSE & data0$U_ABS_EF1041_sum>0,1,0)
-data0$wm_NWG <- ifelse((is.na(data0$B_waerme_EF1011a)==FALSE & data0$B_waerme_EF1011a>0) 
-                       | (is.na(data0$B_waerme_EF1010)==FALSE & data0$B_waerme_EF1010>0),1,0)
-data0$wm_HH <- ifelse(is.na(data0$B_waerme_EF1011b)==FALSE & data0$B_waerme_EF1011b>0,1,0)
-
-
-
-# Fuel fixed effects
-# ------------------
-data0$HETGruppen[is.na(data0$HETGruppen)==TRUE] <- 0
-data0$se_hc <- ifelse(data0$HETGruppen==1,1,0)
-data0$se_bk <- ifelse(data0$HETGruppen==2,1,0)
-data0$se_oil <- ifelse(data0$HETGruppen==3,1,0)
-data0$se_gas <- ifelse(data0$HETGruppen==4,1,0)
-data0$se_water <- ifelse(data0$HETGruppen==5,1,0)
-data0$se_waste <- ifelse(data0$HETGruppen==12,1,0)
-data0$se_sonst <- ifelse(data0$HETGruppen>=13,1,0)
-
-
-
-# Join fuel categories in case of too few observations
-# ----------------------------------------------------
-data0$se_bio <- ifelse(data0$HETGruppen==9 | data0$HETGruppen==10,1,0)
-data0$se_coal <- ifelse(data0$se_hc==1 | data0$se_bk==1,1,0)
-data0$se_EE <- ifelse(data0$HETGruppen==6 | data0$HETGruppen==7 | data0$HETGruppen==8 
-                      | data0$HETGruppen==11 ,1,0)
-data0$se_EE2 <- ifelse(data0$se_EE==1 | data0$se_water==1 | data0$se_bio==1 | data0$se_sonst==1,1,0)
-
-
-
-
-
-#=================================================================================================
-# 1.3 Prices      
-#=================================================================================================
-
-
 # Logarithmize electricity prices
 # -------------------------------
 data0$p_sa_log <- log(data0$p_sa*100)
@@ -427,189 +361,14 @@ data0$p_LV_log[is.na(data0$p_LV_log)==TRUE]<- 0
 data0$p_HH_log[is.na(data0$p_HH_log)==TRUE]<- 0
 data0$p_VG_log[is.na(data0$p_VG_log)==TRUE]<- 0
 data0$p_BC_log[is.na(data0$p_BC_log)==TRUE]<- 0
-# Jetzt sollte es keine NAs mehr geben.
 dstat(data0$p_sa_log,d=2)
 
 
 
-#=================================================================================================
-#  1.4 Organisation variables       
-#=================================================================================================
-
-# Recode ownership
-# ----------------
-# 0: purely public
-# 1: private minority
-data0$eigentuemer2[data0$eigentuemer2==2] <- 0
-
-
-# Legal form: Define 5 categories
-# -------------------------------
-data0$status <- NA
-data0$status[data0$Rechtsform_Zahl==9 | data0$Rechtsform_Zahl==7
-             |((data0$Rechtsform_Zahl==10 | is.na(data0$Rechtsform_Zahl)==TRUE)
-               & (is.na(data0$EF6)==FALSE & (data0$EF6==12 | data0$EF6==8)))
-             ] <- 1
-data0$status[data0$Rechtsform_Zahl==8 
-             | ((data0$Rechtsform_Zahl==10 | is.na(data0$Rechtsform_Zahl)==TRUE) 
-                & is.na(data0$EF6)==FALSE & data0$EF6>=20 & data0$EF6<=22)
-             ] <- 2
-data0$status[(data0$Rechtsform_Zahl>=1 & data0$Rechtsform_Zahl<=5) 
-             | ((data0$Rechtsform_Zahl==10 | is.na(data0$Rechtsform_Zahl)==TRUE)  
-                & is.na(data0$EF6)==FALSE & data0$EF6>=1 & data0$EF6<=6)
-             ] <- 3
-data0$status[data0$Rechtsform_Zahl==6
-             | ((data0$Rechtsform_Zahl==10 | is.na(data0$Rechtsform_Zahl)==TRUE)  
-                & is.na(data0$EF6)==FALSE & data0$EF6==7)
-             ] <- 4
-data0$status[data0$Rechtsform_Zahl==11] <- 5
-summary(as.factor(data0$status))
-
-
-# Legal form fixed effects
-# ------------------------
-data0$Verband <- ifelse(data0$status==1,1,0)
-data0$Eigenbetrieb <- ifelse(data0$status==2,1,0)
-data0$unlisted <- ifelse(data0$status==3,1,0) 
-data0$listed <- ifelse(data0$status==4,1,0)
-data0$privlaw <- ifelse(data0$status==3 | data0$status==4,1,0)
-
-
-# Outsourcing I: Share of external services in total services
-# -----------------------------------------------------------
-data0$shareF <- data0$fremdeDL/(data0$bruttolohn + data0$fremdeDL)
-
-# Outsourcing II: Share of procured energy and water in total revenue
-# -------------------------------------------------------------------
-# Umkodieren der NAs-->0 in der Variable UK_Code4501
-data0$UK_Code4501[is.na(data0$UK_Code4501)==TRUE] <- 0
-data0$shareFEW <- data0$UK_Code4501/data0$revenues1
-
-
 
 #=================================================================================================
-#  1.5 Other covariates     
+# 1.2) Sample defintion                                      
 #=================================================================================================
-
-
-# Settlement structure fixed effects
-# -----------------------------------
-data0$metro <- ifelse(data0$Siedlung==1,1,0)
-data0$suburban <- ifelse(data0$Siedlung==2,1,0)
-data0$rurald <- ifelse(data0$Siedlung==3,1,0)
-data0$rurals <- ifelse(data0$Siedlung==4,1,0)
-
-
-# Firm size fixed effects
-# -----------------------
-data0$size_small <- ifelse(data0$revenues1<10000000 & data0$beschaeftigte<=49,1,0)
-data0$size_med <- ifelse(data0$size_small==0 
-                         & data0$revenues1<50000000 & data0$beschaeftigte<=249,1,0)
-data0$size_large <- ifelse(data0$size_small==0 & data0$size_med==0 
-                           & (data0$revenues1>=50000000 | data0$beschaeftigte>249),1,0)
-
-summary(as.factor(data0$size_small))
-summary(as.factor(data0$size_med))
-summary(as.factor(data0$size_large))
-
-# Were all firms sorted into a category?
-nrow(subset(data0, size_small==1 | size_med==1 | size_large==1))==nrow(data0)
-
-
-# Investments intensity
-# ---------------------
-# Investitionsintensität =  Investitionen/Revenues
-data0$inv_int <- data0$investment/data0$revenues1
-dstat(as.data.frame(data0$inv_int),d=2)
-
-
-
-# Customer structure in the electricity sector
-# --------------------------------------------
-data0$ShareTK<-ifelse(data0$U_ABS_EF1051_sum>0
-                      ,data0$U_ABS_EF1051_sum/data0$U_ABS_EF1061,0)
-
-data0$ShareSK<-ifelse(data0$U_ABS_EF1041_sum>0
-                      ,data0$U_ABS_EF1041_sum/data0$U_ABS_EF1061,0)
-
-data0$ShareWV<-ifelse(is.na(data0$U_ABS_EF1011_sum)==FALSE
-                      ,data0$U_ABS_EF1011_sum/(data0$U_ABS_EF1061
-                                               +ifelse(is.na(data0$U_ABS_EF1011_sum)==TRUE,0
-                                                       ,data0$U_ABS_EF1011_sum)),0)
-
-data0$ShareTK[is.na(data0$ShareTK)==TRUE] <- 0
-data0$ShareSK[is.na(data0$ShareSK)==TRUE] <- 0
-data0$ShareWV[is.na(data0$ShareWV)==TRUE] <- 0
-
-dstat(as.data.frame(data0$ShareTK),d=2)
-dstat(as.data.frame(data0$ShareSK),d=2)
-dstat(as.data.frame(data0$ShareWV),d=2)
-
-
-# Customer structure in the heat sector
-# -------------------------------------
-data0$ShareHH <- ifelse(data0$B_waerme_EF1011b>0
-                        ,data0$B_waerme_EF1011b/data0$B_waerme_EF1011,0)
-
-data0$ShareVG <- ifelse(data0$B_waerme_EF1011a>0
-                        ,data0$B_waerme_EF1011a/data0$B_waerme_EF1011,0)
-
-data0$ShareSo <- ifelse(data0$B_waerme_EF1011c>0
-                        ,data0$B_waerme_EF1011c/data0$B_waerme_EF1011,0)
-
-data0$ShareWV_w<-ifelse(is.na(data0$B_waerme_EF1010)==FALSE
-                        ,data0$B_waerme_EF1010/(data0$B_waerme_EF1011
-                                                +ifelse(is.na(data0$B_waerme_EF1010)==TRUE
-                                                        ,0,data0$B_waerme_EF1010)),0)
-
-data0$ShareHH[is.na(data0$ShareHH)==TRUE] <- 0
-data0$ShareSo[is.na(data0$ShareSo)==TRUE] <- 0
-data0$ShareVG[is.na(data0$ShareVG)==TRUE] <- 0
-data0$ShareWV_w[is.na(data0$ShareWV_w)==TRUE] <- 0
-
-dstat(as.data.frame(data0$ShareHH),d=2)
-dstat(as.data.frame(data0$ShareSo),d=2)
-dstat(as.data.frame(data0$ShareVG),d=2)
-dstat(as.data.frame(data0$ShareWV_w),d=2)
-
-
-# time fixed effects
-# ------------------
-data0$t2003 <- ifelse(data0$year==2003,1,0)
-data0$t2004 <- ifelse(data0$year==2004,1,0)
-data0$t2005 <- ifelse(data0$year==2005,1,0)
-data0$t2006 <- ifelse(data0$year==2006,1,0)
-data0$t2007 <- ifelse(data0$year==2007,1,0)
-data0$t2008 <- ifelse(data0$year==2008,1,0)
-data0$t2009 <- ifelse(data0$year==2009,1,0)
-data0$t2010 <- ifelse(data0$year==2010,1,0)
-data0$t2011 <- ifelse(data0$year==2011,1,0)
-data0$t2012 <- ifelse(data0$year==2012,1,0)
-data0$t2013 <- ifelse(data0$year==2013,1,0)
-data0$t2014 <- ifelse(data0$year==2014,1,0)
-
-
-
-#=================================================================================================
-#    2) Data cleaning and sample defintion                                      
-#=================================================================================================
-
-# Clean
-# -----
-# Drop all firms without information on legal status, ownership, and settlement structure. Drop
-# the few lignite plants as they block the bootstrap.
-data0 <- subset(data0,is.na(data0$status)==FALSE 
-                & is.na(data0$eigentuemer2)==FALSE
-                & is.na(data0$Siedlung)==FALSE
-                & se_bk==0)
-
-# Drop firms with inconsistent reports on settlement structure
-# ------------------------------------------------------------
-data0 <- subset(data0,Siedlung !=5)
-
-# Drop constant columns
-# ---------------------
-data0 <- subset(data0,select=-c(se_bk))
 
 
 # Define main sample
@@ -633,19 +392,12 @@ data_p_all <- pdata.frame(data0all, index=c("id","year"),row.names=FALSE)
 pdim(data_p_all)
 
 
-# generate time trend
-# --------------------
-# 2003=1, 2004=2, ...
-data_p$t <- as.numeric(factor(data_p$year))
-data_p_all$t <- as.numeric(factor(data_p_all$year))
-
-
 #=================================================================================================
-#     3) Reorganisation choice                                         
+#     2) Start Analysis: reorganisation choice                                         
 #=================================================================================================
 
 #=================================================================================================
-# 3.1 Outsourcing 1: External services
+# 2.1 Outsourcing 1: External services
 #=================================================================================================
 
 # Regress the share of external services on the following components:
@@ -673,7 +425,7 @@ summary(out1_OLS4)
  
 
 #=================================================================================================
-# 3.2 Outsourcing 2: Production
+# 2.2 Outsourcing 2: Production
 #=================================================================================================
  
 # Regress the share of procured energy and water on the following components:
@@ -699,12 +451,12 @@ summary(out2_OLS4)
 
 
 #=================================================================================================
-# 4) Structural estimation				    	
+# 3) Structural production function estimation (estimates TFP)				    	
 #=================================================================================================
 
 
 #=================================================================================================
-# 4.1 base model with OLS                                            
+# 3.1 base model with OLS                                            
 #=================================================================================================
 
 # Model production function as a translog function:
@@ -748,7 +500,7 @@ betas_basic_m <- as.vector(first_stage_OLS_m2$coefficients)
 
 
 #=================================================================================================
-# 4.2 First-stage estimation (OLS)                         
+# 3.2 First-stage estimation (OLS)                         
 #=================================================================================================
 
 # First stage OLS estimation in ACF (2005). Eliminates error u_it.
@@ -801,7 +553,7 @@ data_p$exp_u_it <- exp(first_stage_m$residuals)
 
 
 #=================================================================================================
-# 4.3  Second-stage estimation: Preparing the lags
+# 3.3  Second-stage estimation: Preparing the lags
 #=================================================================================================
 
 # Combine all inputs in a matrix (full first-stage sample)
@@ -921,7 +673,7 @@ dim(instr_gmm)
 
 
 #=================================================================================================
-# 4.4  Second-stage estimation: GMM optimisation     
+# 3.4  Second-stage estimation: GMM optimisation     
 #=================================================================================================
 
 # The GMM's objective function is the moment condition E[(Z'v)'*(Z'v)]=0.
@@ -958,7 +710,7 @@ betas2
 
 
 #=================================================================================================
-# 4.5 Bootstrapping the SE              
+# 3.5 Bootstrapping the SE              
 #=================================================================================================
 
 # In this step, we bootstrap the SE for the coefficients from the second stage.
@@ -982,12 +734,12 @@ date()
 
 
 #=================================================================================================
-# 5) Results			                               
+# 4) Results			                               
 #=================================================================================================
 
 
 #=================================================================================================
-# 5.1 Calculating productivity
+# 4.1 Calculating productivity (TFP)
 #=================================================================================================
 
 
@@ -1004,7 +756,7 @@ data_p$omega2e <- exp(data_p$Phi - Inputs%*%betas_final)
 
 
 #=================================================================================================
-# 5.2 Productivity Dispersion
+# 4.2 Productivity dispersion
 #=================================================================================================
 
 dstat(data_p$omega2e,d=3)
@@ -1012,7 +764,7 @@ dstat(exp(data_gmm$omega2),d=3)
 
 
 #=================================================================================================
-# 5.3 Output Elasticities                                                     
+# 4.3 Output elasticities                                                     
 #=================================================================================================
 
 
@@ -1067,12 +819,12 @@ addmargins(table(data_p$year[data_p$rts>1],useNA="ifany",dnn="IRS"))
 
 
 #=================================================================================================
-# 6) Link between reorganisation and productivity
+# 5) Link between reorganisation and productivity
 #=================================================================================================
 
 
 #=================================================================================================
-# 6.1 Productivity growth (Markov process for productivity)       
+# 5.1 Productivity growth (Markov process for productivity)       
 #=================================================================================================
 
 
@@ -1127,7 +879,7 @@ linearHypothesis(AR1_expost
 
 
 #=================================================================================================
-# 6.2 Productivity levels
+# 5.2 Productivity levels
 #=================================================================================================
 
 

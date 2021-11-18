@@ -1513,9 +1513,13 @@ dstat(data_public$value_added/10^6,d=2)
 data_public$value_added2 <- (data_public$revenues-data_public$intermediates
                              -ifelse(is.na(data_public$UK_Code6101)==FALSE,data_public$UK_Code6101
                                      ,0))
-
-
 dstat(data_public$value_added2/10^6,d=2)
+
+
+# Compute value added = revenues (not deflated) - intermediates (deflated)
+# ------------------------------------------------------------------------
+data_public$value_added3 <- data_public$revenues1 - data_public$intermediates
+cor(data_public$value_added2,data_public$value_added3,use="complete.obs")
 
 
 
@@ -1595,83 +1599,287 @@ dstat(data_public$int_share,d=2)
 
 
 #================================================================================================
-# 11) Controls
+# 11) Generate organisation variables
 #================================================================================================
 
-# Legal form (KSE)
+#================================================================================================
+# 11.1 Ownership
+#================================================================================================
+
+# Recode ownership
 # ----------------
-addmargins(table(data_public$Rechtsform_Zahl,data_public$Jahr,useNA="ifany"))
-
-# Legal form (JAB)
-# ----------------
-addmargins(table(data_public$EF6,data_public$Jahr,useNA="ifany"))
-
-# Settlement structure
-# ---------------------
-addmargins(table(data_public$Siedlung,data_public$Jahr,useNA="ifany"))
-
-# Mixed vs. full public ownership
-# -------------------------------
+# 0: purely public
+# 1: private minority
+data_public$eigentuemer2[data_public$eigentuemer2==2] <- 0
 addmargins(table(data_public$eigentuemer2,data_public$Jahr,useNA="ifany"))
 
-# fuel type
-# ---------
+
+#================================================================================================
+# 11.2 Legal form
+#================================================================================================
+
+# Legal form (KSE vsurvey)
+# ------------------------
+addmargins(table(data_public$Rechtsform_Zahl,data_public$Jahr,useNA="ifany"))
+
+# Legal form (JAB survey)
+# -----------------------
+addmargins(table(data_public$EF6,data_public$Jahr,useNA="ifany"))
+
+
+# Summarise in 5 categories using information from both surveys
+# -------------------------------------------------------------
+data_public$status <- NA
+data_public$status[data_public$Rechtsform_Zahl==9 | data_public$Rechtsform_Zahl==7
+             |((data_public$Rechtsform_Zahl==10 | is.na(data_public$Rechtsform_Zahl)==TRUE)
+               & (is.na(data_public$EF6)==FALSE & (data_public$EF6==12 | data_public$EF6==8)))
+             ] <- 1
+data_public$status[data_public$Rechtsform_Zahl==8 
+             | ((data_public$Rechtsform_Zahl==10 | is.na(data_public$Rechtsform_Zahl)==TRUE) 
+                & is.na(data_public$EF6)==FALSE & data_public$EF6>=20 & data_public$EF6<=22)
+             ] <- 2
+data_public$status[(data_public$Rechtsform_Zahl>=1 & data_public$Rechtsform_Zahl<=5) 
+             | ((data_public$Rechtsform_Zahl==10 | is.na(data_public$Rechtsform_Zahl)==TRUE)  
+                & is.na(data_public$EF6)==FALSE & data_public$EF6>=1 & data_public$EF6<=6)
+             ] <- 3
+data_public$status[data_public$Rechtsform_Zahl==6
+             | ((data_public$Rechtsform_Zahl==10 | is.na(data_public$Rechtsform_Zahl)==TRUE)  
+                & is.na(data_public$EF6)==FALSE & data_public$EF6==7)
+             ] <- 4
+data_public$status[data_public$Rechtsform_Zahl==11] <- 5
+summary(as.factor(data_public$status))
+
+
+# Generate legal form fixed effects
+# ---------------------------------
+data_public$Verband <- ifelse(data_public$status==1,1,0)
+data_public$Eigenbetrieb <- ifelse(data_public$status==2,1,0)
+data_public$unlisted <- ifelse(data_public$status==3,1,0) 
+data_public$listed <- ifelse(data_public$status==4,1,0)
+data_public$privlaw <- ifelse(data_public$status==3 | data_public$status==4,1,0)
+
+
+#================================================================================================
+# 11.3 Outsourcing
+#================================================================================================
+
+# Outsourcing I: Share of external services in total services
+# -----------------------------------------------------------
+data_public$shareF <- data_public$fremdeDL/(data_public$bruttolohn + data_public$fremdeDL)
+
+# Outsourcing II: Share of procured energy and water in total revenue
+# -------------------------------------------------------------------
+# Umkodieren der NAs-->0 in der Variable UK_Code4501
+data_public$UK_Code4501[is.na(data_public$UK_Code4501)==TRUE] <- 0
+data_public$shareFEW <- data_public$UK_Code4501/data_public$revenues1
+
+
+
+#================================================================================================
+# 12) Other controls
+#================================================================================================
+
+
+#================================================================================================
+# 12.1 Industry and fuel fixed effects
+#================================================================================================
+
+
+# Industry fixed effects (product mix) 
+# ------------------------------------
+data_public$sa_EVU <- ifelse(is.na(data_public$U_ABS_EF1011_sum)==FALSE & data_public$U_ABS_EF1011_sum>0,1,0)
+data_public$sa_TK <- ifelse(is.na(data_public$U_ABS_EF1051_sum)==FALSE & data_public$U_ABS_EF1051_sum>0,1,0)
+data_public$sa_SK <- ifelse(is.na(data_public$U_ABS_EF1041_sum)==FALSE & data_public$U_ABS_EF1041_sum>0,1,0)
+data_public$wm_NWG <- ifelse((is.na(data_public$B_waerme_EF1011a)==FALSE & data_public$B_waerme_EF1011a>0) 
+                       | (is.na(data_public$B_waerme_EF1010)==FALSE & data_public$B_waerme_EF1010>0),1,0)
+data_public$wm_HH <- ifelse(is.na(data_public$B_waerme_EF1011b)==FALSE & data_public$B_waerme_EF1011b>0,1,0)
+
+
+# Fuel fixed effects
+# ------------------
 addmargins(table(data_public$HETGruppen[data_public$TM066K_b==1 | data_public$TM064_b==1]
                  ,data_public$Jahr[data_public$TM066K_b==1 | data_public$TM064_b==1],useNA="ifany"))
+data_public$HETGruppen[is.na(data_public$HETGruppen)==TRUE] <- 0
+data_public$se_hc <- ifelse(data_public$HETGruppen==1,1,0)
+data_public$se_bk <- ifelse(data_public$HETGruppen==2,1,0)
+data_public$se_oil <- ifelse(data_public$HETGruppen==3,1,0)
+data_public$se_gas <- ifelse(data_public$HETGruppen==4,1,0)
+data_public$se_water <- ifelse(data_public$HETGruppen==5,1,0)
+data_public$se_waste <- ifelse(data_public$HETGruppen==12,1,0)
+data_public$se_sonst <- ifelse(data_public$HETGruppen>=13,1,0)
 
 
-# location identifier: Regionalschluessel (JAB)
-# ---------------------------------------------
-addmargins(table(nchar(data_public$EF7),data_public$Jahr,useNA="ifany"))
+# Join fuel categories in case of too few observations
+data_public$se_bio <- ifelse(data_public$HETGruppen==9 | data_public$HETGruppen==10,1,0)
+data_public$se_coal <- ifelse(data_public$se_hc==1 | data_public$se_bk==1,1,0)
+data_public$se_EE <- ifelse(data_public$HETGruppen==6 | data_public$HETGruppen==7 | data_public$HETGruppen==8 
+                      | data_public$HETGruppen==11 ,1,0)
+data_public$se_EE2 <- ifelse(data_public$se_EE==1 | data_public$se_water==1 | data_public$se_bio==1 | data_public$se_sonst==1,1,0)
 
 
-####################################################################################################
-##                  4) Auswahl des Subsets                                                        ##
-####################################################################################################
+# Investments intensity
+# ---------------------
+# Investitionsintensität =  Investitionen/Revenues
+data_public$inv_int <- data_public$investment/data_public$revenues1
+dstat(as.data.frame(data_public$inv_int),d=2)
 
 
-########################################################################
-##   4.1 Bereinige um Utilities mit unplausiblen Werten (Ausreißer)   ##
-########################################################################
+#================================================================================================
+# 12.2 Customer structure
+#================================================================================================
 
 
-########################################
-#     4.1.1 Kriterien KSE vs. JAB     ##
-########################################
+# Customer structure in the electricity sector
+# --------------------------------------------
+data_public$ShareTK<-ifelse(data_public$U_ABS_EF1051_sum>0
+                      ,data_public$U_ABS_EF1051_sum/data_public$U_ABS_EF1061,0)
+
+data_public$ShareSK<-ifelse(data_public$U_ABS_EF1041_sum>0
+                      ,data_public$U_ABS_EF1041_sum/data_public$U_ABS_EF1061,0)
+
+data_public$ShareWV<-ifelse(is.na(data_public$U_ABS_EF1011_sum)==FALSE
+                      ,data_public$U_ABS_EF1011_sum/(data_public$U_ABS_EF1061
+                                               +ifelse(is.na(data_public$U_ABS_EF1011_sum)==TRUE,0
+                                                       ,data_public$U_ABS_EF1011_sum)),0)
+
+data_public$ShareTK[is.na(data_public$ShareTK)==TRUE] <- 0
+data_public$ShareSK[is.na(data_public$ShareSK)==TRUE] <- 0
+data_public$ShareWV[is.na(data_public$ShareWV)==TRUE] <- 0
+
+dstat(as.data.frame(data_public$ShareTK),d=2)
+dstat(as.data.frame(data_public$ShareSK),d=2)
+dstat(as.data.frame(data_public$ShareWV),d=2)
 
 
-# Kriterien
-# ---------
-# Entferne alle Utilities, deren KSE- und JAB-Werte sich zu stark unterscheiden. Ist der Anteil
-# KSE-Wertes weniger als halb so groß bzw. mehr als doppelt so groß wie der JAB-Wert, entferne die
-# Utility aus dem Sample, da nicht klar ist, welcher Wert der richtige ist.
-# Ausnahme: Arbeitnehmer, da es dort unterschiedliche Definitionen geben kann und Intermediates,
-# da dort die Korrelation nicht so genau war.
+# Customer structure in the heat sector
+# -------------------------------------
+data_public$ShareHH <- ifelse(data_public$B_waerme_EF1011b>0
+                        ,data_public$B_waerme_EF1011b/data_public$B_waerme_EF1011,0)
 
-# Achtung: Lasse auch alle Beobachtungen im Sample, wo die cor_* Variable Null (d.h. KSE-Variable=0)
-# oder NA ist (d.h. JAB-Variable ist 0 oder NA), da sonst alle Ersetzungen rausfliegen.
+data_public$ShareVG <- ifelse(data_public$B_waerme_EF1011a>0
+                        ,data_public$B_waerme_EF1011a/data_public$B_waerme_EF1011,0)
+
+data_public$ShareSo <- ifelse(data_public$B_waerme_EF1011c>0
+                        ,data_public$B_waerme_EF1011c/data_public$B_waerme_EF1011,0)
+
+data_public$ShareWV_w<-ifelse(is.na(data_public$B_waerme_EF1010)==FALSE
+                        ,data_public$B_waerme_EF1010/(data_public$B_waerme_EF1011
+                                                +ifelse(is.na(data_public$B_waerme_EF1010)==TRUE
+                                                        ,0,data_public$B_waerme_EF1010)),0)
+
+data_public$ShareHH[is.na(data_public$ShareHH)==TRUE] <- 0
+data_public$ShareSo[is.na(data_public$ShareSo)==TRUE] <- 0
+data_public$ShareVG[is.na(data_public$ShareVG)==TRUE] <- 0
+data_public$ShareWV_w[is.na(data_public$ShareWV_w)==TRUE] <- 0
+
+dstat(as.data.frame(data_public$ShareHH),d=2)
+dstat(as.data.frame(data_public$ShareSo),d=2)
+dstat(as.data.frame(data_public$ShareVG),d=2)
+dstat(as.data.frame(data_public$ShareWV_w),d=2)
 
 
-data_public$out_labour <- ifelse(is.na(data_public$cor_labour)==TRUE 
-                                 | data_public$cor_labour==0 
-                                 | (data_public$cor_labour>0.1 & data_public$cor_labour<10),0,1)
-summary(as.factor(data_public$out_labour))
+#================================================================================================
+# 12.2 Settlement, time, and size fixed effects
+#================================================================================================
 
+# Settlement structure fixed effects
+# -----------------------------------
+addmargins(table(data_public$Siedlung,data_public$Jahr,useNA="ifany"))
+data_public$metro <- ifelse(data_public$Siedlung==1,1,0)
+data_public$suburban <- ifelse(data_public$Siedlung==2,1,0)
+data_public$rurald <- ifelse(data_public$Siedlung==3,1,0)
+data_public$rurals <- ifelse(data_public$Siedlung==4,1,0)
+
+
+# time fixed effects
+# ------------------
+data_public$t2003 <- ifelse(data_public$year==2003,1,0)
+data_public$t2004 <- ifelse(data_public$year==2004,1,0)
+data_public$t2005 <- ifelse(data_public$year==2005,1,0)
+data_public$t2006 <- ifelse(data_public$year==2006,1,0)
+data_public$t2007 <- ifelse(data_public$year==2007,1,0)
+data_public$t2008 <- ifelse(data_public$year==2008,1,0)
+data_public$t2009 <- ifelse(data_public$year==2009,1,0)
+data_public$t2010 <- ifelse(data_public$year==2010,1,0)
+data_public$t2011 <- ifelse(data_public$year==2011,1,0)
+data_public$t2012 <- ifelse(data_public$year==2012,1,0)
+data_public$t2013 <- ifelse(data_public$year==2013,1,0)
+data_public$t2014 <- ifelse(data_public$year==2014,1,0)
+
+# generate time trend
+# --------------------
+# 2003=1, 2004=2, ...
+data_public$t <- as.numeric(factor(data_public$year))
+
+
+# Firm size fixed effects
+# -----------------------
+data_public$size_small <- ifelse(data_public$revenues1<10000000 & data_public$beschaeftigte<=49,1,0)
+data_public$size_med <- ifelse(data_public$size_small==0 
+                         & data_public$revenues1<50000000 & data_public$beschaeftigte<=249,1,0)
+data_public$size_large <- ifelse(data_public$size_small==0 & data_public$size_med==0 
+                           & (data_public$revenues1>=50000000 | data_public$beschaeftigte>249),1,0)
+
+summary(as.factor(data_public$size_small))
+summary(as.factor(data_public$size_med))
+summary(as.factor(data_public$size_large))
+
+# Were all firms sorted into a category?
+nrow(subset(data_public, size_small==1 | size_med==1 | size_large==1))==nrow(data_public)
+
+
+
+#================================================================================================
+# 13) Select estimation sample                                                       
+#================================================================================================
+
+
+#================================================================================================
+# 13.1 Drop outliers
+#================================================================================================
+
+
+#================================================================================================
+# 13.1.1 Divergence between KSE and JAB survey
+#================================================================================================
+
+# Idea: If the values of items that figure both in the KSE and JAB survey differ too much from 
+# each other, discard these observations, since it is unclear which value can be trusted.
+
+# Algorithm: Use correlation measure.
+
+# Exception: Use different thresholds for intermediates variable as the definition of 
+# intermediates differs between the two surveys.
+
+# Note: Keep all observations with cor_* == 0 (i.e., KSE variable = 0) or cor_* == NA 
+# (i.e. JAB variable = 0 or NA), else replacements would be lost.
+
+
+# labour costs
+# ------------
 data_public$out_lohn <- ifelse(is.na(data_public$cor_lohn)==TRUE 
                                 | data_public$cor_lohn==0 
                                  | (data_public$cor_lohn>0.5 & data_public$cor_lohn<2),0,1)
 summary(as.factor(data_public$out_lohn))
 
+# intermediates
+# -------------
 data_public$out_int <- ifelse(is.na(data_public$cor_int)==TRUE 
                                | data_public$cor_int==0 
                                | (data_public$cor_int>0.3 & data_public$cor_int<3),0,1)
 summary(as.factor(data_public$out_int))
 
+# revenues
+# ---------
 data_public$out_umsatz <- ifelse(is.na(data_public$cor_umsatz)==TRUE 
                                  | data_public$cor_umsatz==0
                                  | (data_public$cor_umsatz>0.5 & data_public$cor_umsatz<2),0,1)
 summary(as.factor(data_public$out_umsatz))
 
+
+
+# Drop utilities with unit prices above one
+# -----------------------------------------
 data_public$out_p_LV <- ifelse(is.na(data_public$p_LV)==TRUE | data_public$p_LV<=1,0,1)
 summary(as.factor(data_public$out_p_LV))
 
@@ -1698,12 +1906,8 @@ summary(as.factor(data_public$out_p_sa))
 
 
 
-# Hier eventuell auch noch fremde DL berücksichtigen.
-
-
-# Anwendung der Kriterien KSE vs. JAB
-# -----------------------------------
-# (belasse unplausible # AN im Sample, da größtenteils mit wagebill gearbeitet wird)
+# Apply algorithm
+# ---------------
 data_public_clear1 <- subset(data_public, 
                              out_lohn==0 & out_umsatz==0 & out_int==0 & out_p_sa==0  & out_p_LV==0
                              & out_p_EVU==0 & out_p_TK==0 & out_p_SK==0 & out_p_HH==0 & out_p_VG==0
@@ -1712,12 +1916,12 @@ addmargins(table(data_public_clear1$Jahr))
 
 
 
-###############################################
-##  4.1.2 Kriterien Input shares             ##
-###############################################
+#================================================================================================
+# 13.1.2 Unplausible input shares
+#================================================================================================
 
-# Kriterien
-# ---------
+# Drop utilities with input shares above 2
+# ----------------------------------------
 data_public_clear2 <- subset(data_public_clear1, (is.na(wage_share)==TRUE |wage_share <2) 
                                   & (is.na(service_share)==TRUE | service_share <2)
                                   & (is.na(int_share)==TRUE | int_share<2))
@@ -1725,26 +1929,15 @@ addmargins(table(data_public_clear2$Jahr))
 
 
 
-
-
-# Grundsätzlich könnte man drüber nachdenken, am Ende alle Utilities zu entfernen, für die in
-# einem Jahr keine Inputs vorliegen (NA), so dass sie faktisch auch nicht durchgängig beobachtet 
-# werden. 
-
-
-
-#############################################
-##    4.1.3 Kriterien Verteilung           ##
-#############################################
-
-# Die Quantilbereinigung führt pro Kriterium automatisch zu einer Reduktion des Samples um 1% mit
-# suksessivem 'Zinsezins-Effekt' unabhängig davon, ob die Extremwerte tatsächlich Ausreißer sind.
-# Je mehr Kriterien, desto kleiner das finale Sample. Daher sparsam mit den Kriterien umgehen.
+#================================================================================================
+# 13.1.3 Dispersion
+#================================================================================================
 
 
 
-# Q99.9-Quantil: Sehr große Unternehmen entfernen
-# ---------------------------------------------
+
+# Q99.9 qantile: Drop the right 0.001 tail of the input and output distributions
+# ------------------------------------------------------------------------------
 
 out_q999 <- data_public_clear2$id[as.numeric(data_public_clear2$fremdeDL)> quantile(data_public_clear2$fremdeDL,0.999,na.rm=TRUE)
                             | as.numeric(data_public_clear2$K_adj)>quantile(data_public_clear2$K_adj,0.999,na.rm=TRUE)
@@ -1760,10 +1953,8 @@ addmargins(table(data_public_clear3$Jahr,useNA="ifany"))
 
 
 
-# Q0.001-Quantil: Sehr kleine Unternehmen entfernen
-# ------------------------------------------------
-
-
+# Q0.001 qantile: Drop the left 0.001 tail of the input and output distributions
+# ------------------------------------------------------------------------------
 
 out_q0001 <- data_public_clear3$id[as.numeric(data_public_clear3$fremdeDL)< quantile(data_public_clear3$fremdeDL,0.001,na.rm=TRUE)
                              | as.numeric(data_public_clear3$K_adj)<quantile(data_public_clear3$K_adj,0.001,na.rm=TRUE)
@@ -1778,96 +1969,69 @@ data_public_clear3 <- data_public_clear3[!(data_public_clear3$id %in% c(out_q000
 addmargins(table(data_public_clear3$Jahr,useNA="ifany"))
 
 
+#================================================================================================
+# 13.1.4 Missing values in key variables
+#================================================================================================
 
-# # Standardfehler: Unternehmen mit großer Standardabweichung in den Variablen entfernen
-# # ------------------------------------------------------------------------------------
-# 
-# # Idee: Berechne für jedes Unternehmen die Standardabweichung pro Variable über alle Jahre.
-# # Unternehmen, die nur einmal beobachtet werden, erhalten ein 'NA'.
-# 
-# sd_var <- matrix(NA,length(unique(data_public_clear3$id)),6)
-# colnames(sd_var)=c("id","sd_fremdeDL","sd_K_adj","sd_bruttolohn","sd_intermediates","sd_revenues")
-# 
-# for(i in 1:length(unique(data_public_clear3$id))){
-#   dat.tmp <- data_public_clear3[which(data_public_clear3$id==unique(data_public_clear3$id)[i]),]
-#   sd_var[i,1] <- dat.tmp$id[1]
-#   sd_var[i,2] <- sd(dat.tmp$fremdeDL,na.rm=TRUE)
-#   sd_var[i,3] <- sd(dat.tmp$K_adj,na.rm=TRUE)
-#   sd_var[i,4] <- sd(dat.tmp$bruttolohn,na.rm=TRUE)
-#   sd_var[i,5] <- sd(dat.tmp$intermediates,na.rm=TRUE)
-#   sd_var[i,6] <- sd(dat.tmp$revenues,na.rm=TRUE)
-# }
-# 
-# sd_var <- as.data.frame(sd_var)
-# 
-# # Entferne alle Unternehmen, deren Standardabweichung höher als das Q99-Quantil ist.
-# # Problem: Veränderungen in den Inputs großer Unternehmen führen zu prozentual größeren SE.
-# # Beispiel: Unternehmen A verdoppelt Arbeitnehmer im Folgejahr von 1 auf 2, Unternehmen B verdoppelt
-# # Arbeitnehmer von 1000 auf 2000. Unternehmen C verhundertfacht Arbeitnehmer von 1 auf 100.
-# sd(c(1,2))
-# sd(c(1000,2000))
-# sd(c(1,100))
-# # Unternehmen B hat die höchste Standardabweichung, obwohl Unternehmen C intuitiv die fragwürdigste
-# # Abweichung hat.
-# 
-# out_sd <- sd_var$id[sd_var$sd_fremdeDL > quantile(sd_var$sd_fremdeDL,0.999,na.rm=TRUE)
-#                     |sd_var$sd_K_adj > quantile(sd_var$sd_K_adj,0.999,na.rm=TRUE)
-#                     |sd_var$sd_bruttolohn > quantile(sd_var$sd_bruttolohn,0.999,na.rm=TRUE)
-#                     |sd_var$sd_intermediates > quantile(sd_var$sd_intermediates,0.999,na.rm=TRUE)
-#                     |sd_var$sd_revenues > quantile(sd_var$sd_revenues,0.999,na.rm=TRUE)]
-# 
-# 
-# outlier_sd <- data_public_clear3[(data_public_clear3$id %in% c(out_sd)),]
-# addmargins(table(outlier_sd$Jahr,dnn="Anzahl Outlier basierend auf sd()"))
-# data_public_clear4 <- data_public_clear3[!(data_public_clear3$id %in% c(out_sd)),]
-# addmargins(table(data_public_clear4$Jahr,useNA="ifany"))
+# Drop all firms without information on legal status, ownership, and settlement structure. Drop
+# the few lignite plants as they block the bootstrap.
+data_public_clear3 <- subset(data_public_clear3,is.na(data_public_clear3$status)==FALSE 
+                	& is.na(data_public_clear3$eigentuemer2)==FALSE
+                	& is.na(data_public_clear3$Siedlung)==FALSE
+                	& se_bk==0)
+
+# Drop firms with inconsistent reports on settlement structure
+data_public_clear3 <- subset(data_public_clear3,Siedlung !=5)
 
 
+# Choose only firms with positive values in inputs and outputs
+# ------------------------------------------------------------
+# (as we will logarithmise inputs and outputs)
+data_public_clear3 <- subset(data, fremdeDL>0 & K_adj>0 & bruttolohn>0 & value_added3>0)
+addmargins(table(data_public_clear3$year))
 
-####################################################################################################
-##    5) Fallzahlen finaler Datensatz                                                             ##
-####################################################################################################
+
+#================================================================================================
+# 13.2 Frequencies
+#================================================================================================
 
 
-# Wieviele Firmen sind es bereinigt?
+# How many observations do we have per year?
+# ------------------------------------------
 addmargins(table(data_public_clear3$Jahr))
 
 
-# K_adj>0
-# -------
+# with positive values for capital: K_adj>0
+# -----------------------------------------
 data_public_K <- subset(data_public_clear3,K_adj>0)
 addmargins(table(data_public_K$Jahr))
 
 
-# K_t_defl>0
-# ----------
-# data_public_final2 <- subset(data_public_clear3,K_t_defl>0)
-# addmargins(table(data_public_final2$Jahr))
-
-# Bruttolohn>0
-# ------------
+# with positive values for labour: bruttolohn>0
+# ---------------------------------------------
 data_public_L <- subset(data_public_clear3,bruttolohn>0)
 addmargins(table(data_public_L$Jahr))
 
 
-# Beschäftigte>0
-# ------------
-data_public_B <- subset(data_public_clear3,beschaeftigte>0)
-addmargins(table(data_public_B$Jahr))
+
+#================================================================================================
+# 14) Clean and save data set                                                             
+#================================================================================================
 
 
-####################################################################################################
-##    6) Datensatz abspeichern                                                                    ##
-####################################################################################################
+# Remove constant variables
+# -------------------------
+data_public_clear3 <- subset(data_public_clear3,select=-c(id_ns,id_he1,id_he2,id_he3,id_he4
+				,id_th,id_sh,jab,public, se_bk,Lueckenjahre,out_labour,out_lohn
+				,out_int,out_umsatz,out_p_LV,out_p_EVU,out_p_TK,out_p_SK,out_p_HH
+				,out_p_VG,out_p_BC,out_p_sa))
 
-# Exportiere Daten in .dat-Datei. (ohne Bereinigung um Verteilung)
-write.dta(data_public_clear2,paste(Pfad1,"data_public_single_final_cs_v4.dta",sep=""))
-
-# Exportiere Daten in .dat-Datei.
+# Export data set
+# ---------------
 write.dta(data_public_clear3,paste(Pfad1,"data_public_single_final_cs_v3.dta",sep=""))
 
 
-####################################################################################################
+#================================================================================================
 date()
-####################################### End of file ################################################
+#===========================End of file==========================================================
 
