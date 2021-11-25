@@ -11,9 +11,9 @@
 #
 # file structure
 # --------------
-# part 1: sample construction (MPF_sample_construction_v20.R, this file)
-# part 2: data descriptives
-# part 3: estimation (MPF_main_sample_v180.R, this file) 
+# part 1: sample construction (01_RCO_sample_construction_v20.R, this file)
+# part 2: data descriptives (02_RCO_descriptives_v24.R)
+# part 3: estimation (03_RCO_main_sample_v180.R) 
 #
 #
 #
@@ -24,10 +24,6 @@
 #				0) Preparation                                              
 #================================================================================================
 
-
-# Clean memory
-# ------------ 
-rm(list=ls())
 
 date()
 
@@ -101,25 +97,18 @@ dstat <- function(X,d){
 # 0.3 Load data
 #================================================================================================
 
-
 # Load data set
-# data <- read.dta13(file.path(Pfad2,"/na2094-2012_Energie_JAB_Panel_erw_full_mit_Organ_II_2003-2014.dta"))  
-
+# -------------
+data <- read.dta13(file.path(Path2,"/<original data set name>.dta"))  
 
 class(data)
 dim(data)
-
-
-# Use fixed notation instead of exponential notation
-# --------------------------------------------------
-options(scipen=999)
 
 
 
 #================================================================================================
 # 1) Convert and recode data
 #================================================================================================
-
 
 #================================================================================================
 # 1.1 Energy statistics (KSE etc.)
@@ -136,7 +125,7 @@ data$ags_u_new <- ifelse(data$ags_u=="." | data$ags_u=="",NA,as.numeric(data$ags
 if(class(data$ags_u_new) != "numeric") data$ags_u_new <- as.numeric(data$ags_u_new)
 
 
-* Extract county info (Kreisebene) from location identifier (Allgemeiner Gemeindeschluessel: AGS)
+# Extract county info (Kreisebene) from location identifier (Allgemeiner Gemeindeschluessel: AGS)
 # -----------------------------------------------------------------------------------------------
 summary(as.factor(nchar(data$ags_u_new)))
 
@@ -403,6 +392,7 @@ addmargins(table(data$eigentuemer,data$Jahr,useNA="ifany"))
 # 1.3 URS (Unternehmensregister)
 #================================================================================================
 
+
 # Convert public firm identifier to numeric format
 # ------------------------------------------------
 table(data$urs_public,data$Jahr,useNA="ifany")
@@ -469,7 +459,6 @@ addmargins(table(data_U$jab,data_U$Jahr,useNA="ifany"))
 # 3) Generate control variables for the economic activity (industries)                                     
 #================================================================================================
 
-
 #================================================================================================
 # 3.1 NACE code
 #================================================================================================
@@ -532,7 +521,7 @@ data0$sn <- ifelse((data0$TM070_u>0 | data0$TM066N_u>0),1,0)
 # electricity generation
 # ----------------------
 # criterion: participation in survey no. 66K
-data0$se <- ifelse(data0$TM066K_b==1),1,0)
+data0$se <- ifelse(data0$TM066K_b==1,1,0)
 
 # heat supply
 # -----------
@@ -594,7 +583,6 @@ nrow(data0_rest2)
 #================================================================================================
 # 4) Aggregate plant-level data to firm level
 #================================================================================================
-
 
 #================================================================================================
 # 4.1 Aggregation
@@ -791,9 +779,7 @@ summary(as.factor(data_all$eigentuemer_new))
 
 # Fuel type
 # ---------
-Create a new category '15 = mixed fuels' for non-integer fuel types after aggregation
-# Schaffe für alle Hauptenergietraegergruppen, die nicht ganzzahlig sind, eine neue Kategorie 15
-# ("gemischte Hauptenergietraegergruppen")
+# Create a new category '15 = mixed fuels' for non-integer fuel types after aggregation
 length(which(data_all$HETGruppen!=round(data_all$HETGruppen,0))==TRUE)
 data_all$HETGruppen[data_all$HETGruppen!=round(data_all$HETGruppen,0)] <- 15
 
@@ -806,7 +792,6 @@ exit <- as.data.frame(aggregate(cbind("Austrittsjahr"=data_all$Jahr)
                                 ,by=list("id"=data_all$id),max,na.rm=TRUE))
 entryexit <- merge(entry,exit,by=c("id"),all=FALSE)
 data_all <- merge(data_all,entryexit,by=c("id"),all=TRUE)
-
 
 
 
@@ -832,7 +817,6 @@ addmargins(table(data_all$Jahr[data_all$jab==1]))
 # For how many firms do we have at least one plant with a match in the JAB survey?
 # --------------------------------------------------------------------------------
 addmargins(table(data_all$Jahr[data_all$jab>0 & data_all$jab!=1]))
-
 
 
 
@@ -920,8 +904,8 @@ data_all_new$public <- ifelse(is.na(data_all_new$id_he4)==FALSE & data_all_new$J
                             ,data_all_new$public)
 
 
-# Thüringen 2006
-# --------------
+# Thueringen 2006
+# ---------------
 data_th <- subset(data_all,bl==16, select=c(id,Jahr,bl,jab))
 data_th$id1[data_th$Jahr==2006 & data_th$jab==0] <- 1
 data_th$id1[data_th$Jahr==2005 & data_th$jab==1] <- 1
@@ -992,6 +976,7 @@ addmargins(table(data_all_new$bl[data_all_new$public==0],data_all_new$Jahr[data_
 
 
 # time stamp
+# ----------
 date()
 
 
@@ -1262,11 +1247,9 @@ dstat(data_public$invest_defl/10^6,2)
 
 
 
-
 #================================================================================================
 # 7.1.4 Estimate capital stock with PIM
 #================================================================================================
-
 
 
 # -----------------------------------------------------------------------------------------
@@ -1292,7 +1275,6 @@ date()
 
 
 dstat(data_public$K_adj/10^6,d=2)
-
 
 
 
@@ -1411,7 +1393,6 @@ data_public$fremdeDL1 <- ifelse(is.na(data_public$UK_Code5501)==FALSE
 data_public <- data_public[order(data_public$id,data_public$Jahr),]
 data_public$fremdeDL <- data_public$fremdeDL1/data_public$fdl_deflation_index
 dstat(data_public$fremdeDL/10^6,d=2)
-
 
 
 
@@ -1719,7 +1700,6 @@ data_public$se_EE2 <- ifelse(data_public$se_EE==1 | data_public$se_water==1 | da
 
 # Investments intensity
 # ---------------------
-# Investitionsintensität =  Investitionen/Revenues
 data_public$inv_int <- data_public$investment/data_public$revenues1
 dstat(as.data.frame(data_public$inv_int),d=2)
 
@@ -1833,11 +1813,9 @@ nrow(subset(data_public, size_small==1 | size_med==1 | size_large==1))==nrow(dat
 # 13) Select estimation sample                                                       
 #================================================================================================
 
-
 #================================================================================================
 # 13.1 Drop outliers
 #================================================================================================
-
 
 
 # Q99.9 qantile: Drop the right 0.001 tail of the input and output distributions
@@ -1933,10 +1911,9 @@ data_public_clear <- subset(data_public_clear,select=-c(id_ns,id_he1,id_he2,id_h
 
 # Export data set
 # ---------------
-write.dta(data_public_clear,paste(Pfad1,"data_public_single_final.dta",sep=""))
+write.dta(data_public_clear,paste(Path1,"data_public_final.dta",sep=""))
 
 
 #================================================================================================
 date()
 #===========================End of file==========================================================
-

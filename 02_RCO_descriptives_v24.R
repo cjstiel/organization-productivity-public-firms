@@ -11,9 +11,9 @@
 #
 # file structure
 # --------------
-# part 1: sample construction (MPF_sample_construction_v20.R)
-# part 2: descriptives (MPF_descriptives_v24.R, this file)
-# part 3: estimation (MPF_main_sample_v180.R) 
+# part 1: sample construction (01_RCO_sample_construction_v20.R)
+# part 2: descriptives (02_RCO_descriptives_v24.R, this file)
+# part 3: estimation (03_RCO_main_sample_v180.R) 
 #
 #
 #
@@ -23,11 +23,6 @@
 #================================================================================================
 #				0) Preparation                                              
 #================================================================================================
-
-
-# Clean memory
-# ------------ 
-rm(list=ls())
 
 date()
 
@@ -105,17 +100,12 @@ dstat <- function(X,d){
 
 
 # Load data set
-# data <- read.dta13(file.path(Pfad1,"/data_public_single_final.dta"))  
+# ------------
+data <- read.dta13(file.path(Path1,"/data_public_final.dta"))  
 
 
 class(data)
 dim(data)
-
-
-# Use fixed notation instead of exponential notation
-# --------------------------------------------------
-options(scipen=999)
-
 
 
 # Recode as panel data
@@ -175,8 +165,6 @@ length(unique(data_ez$id))
 #================================================================================================
 # 2) Descriptive statistics for inputs and outputs (Table 5 in the paper)
 #================================================================================================
-
-
 
 #================================================================================================
 # 2.1 External services [S in mio EUR]
@@ -245,6 +233,7 @@ dstat(as.data.frame(data_sg$wage))
 dstat(as.data.frame(data_ez$wage))
 
 
+
 #================================================================================================
 # 2.4 Capital [K in mio EUR]
 #================================================================================================
@@ -265,6 +254,7 @@ dstat(as.data.frame(data_sg$K_adj)/10^6,d=2)
 # heat and power plants
 # ---------------------
 dstat(as.data.frame(data_ez$K_adj)/10^6,d=2)
+
 
 
 #================================================================================================
@@ -316,6 +306,7 @@ addmargins(table(data_sg$eigentuemer2,data_sg$Jahr,useNA="ifany"))
 addmargins(table(data_ez$eigentuemer2,data_ez$Jahr,useNA="ifany"))
 
 
+
 #================================================================================================
 # 3.2 Legal form
 #================================================================================================
@@ -341,6 +332,7 @@ addmargins(table(data_sg$status,data_sg$Jahr,useNA="ifany"))
 addmargins(table(data_ez$status,data_ez$Jahr,useNA="ifany"))
 
 
+
 #================================================================================================
 # 3.3 Outsourcing
 #================================================================================================
@@ -364,6 +356,7 @@ dstat(data_sg$shareF,d=2)
 # heat and power plants
 # ---------------------
 dstat(data_ez$shareF,d=2)
+
 
 
 #================================================================================================

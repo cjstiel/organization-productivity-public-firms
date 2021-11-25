@@ -11,9 +11,12 @@
 #
 # file structure
 # --------------
-# part 1: sample construction 
-# part 2: data descriptives
-# part 3: estimation (MPF_main_sample_20181204_v180.R, this file) 
+# part 1: sample construction (01_RCO_sample_construction_v20.R)
+# part 2: data descriptives (02_RCO_descriptives_v24.R)
+# part 3: estimation for mixed utilities (03_RCO_main_sample_v180.R)
+# part 4: estimation for water utilities (04_RCO_water_v188.R)
+# part 5: estimation for electricity and gas utilities (05_RCO_electricity_gas_v169.R)
+# part 6: estimation for heat and power plants (06_RCO_heat_power_plants_v168.R, this file)
 #
 #
 #
@@ -24,10 +27,6 @@
 #				0) Preparation                                              
 #================================================================================================
 
-
-# Clean memory
-# ------------ 
-rm(list=ls())
 
 date()
 
@@ -302,16 +301,11 @@ clusterBootSE<-function(data,method,B){
 
 # load data set
 # -------------
-data <- read.dta(file.path(Pfad1,"data_public_single_final.dta"))
+data <- read.dta(file.path(Path1,"data_public_final.dta"))
 
 
 class(data)
 dim(data)
-
-
-# Use fixed notation instead of exponential notation
-# --------------------------------------------------
-options(scipen=999)
 
 
 
@@ -946,6 +940,6 @@ linearHypothesis(explain_pty2
                  ,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
 
 
-=================================================================================================
+#=================================================================================================
 date()
-========================================== End of file ==========================================
+#========================================== End of file ==========================================
