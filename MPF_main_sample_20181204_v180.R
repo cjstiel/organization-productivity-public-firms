@@ -53,28 +53,10 @@ library(lmtest)
 library(readstata13)
 
 
-#================================================================================================
-# 0.2 Load data
-#================================================================================================
-
-
-# load data set
-# -------------
-data <- read.dta(file.path(Pfad1,"data_public_single_final_cs_v3.dta"))
-
-
-class(data)
-dim(data)
-
-
-# Use fixed notation instead of exponential notation
-# --------------------------------------------------
-options(scipen=999)
-
 
 
 #================================================================================================
-# 0.3 Define functions to be used in the analysis              	        
+# 0.2 Define functions to be used in the analysis              	        
 #================================================================================================
 
 
@@ -313,6 +295,25 @@ clusterBootSE<-function(data,method,B){
 }
 
 
+#================================================================================================
+# 0.3 Load data
+#================================================================================================
+
+
+# load data set
+# -------------
+data <- read.dta(file.path(Pfad1,"data_public_single_final.dta"))
+
+
+class(data)
+dim(data)
+
+
+# Use fixed notation instead of exponential notation
+# --------------------------------------------------
+options(scipen=999)
+
+
 
 #=================================================================================================
 # 1) Data preparation                                                       
@@ -324,44 +325,44 @@ clusterBootSE<-function(data,method,B){
 
 # Logarithmize inputs and outputs
 # -------------------------------
-data0$l <- log(data0$bruttolohn)
-data0$k <- log(data0$K_adj)
-data0$f <- log(data0$fremdeDL)
-data0$w <- log(data0$wage)
-data0$va <- log(data0$value_added2)
-data0$va3 <- log(data0$value_added3)
+data$l <- log(data$bruttolohn)
+data$k <- log(data$K_adj)
+data$f <- log(data$fremdeDL)
+data$w <- log(data$wage)
+data$va <- log(data$value_added2)
+data$va3 <- log(data$value_added3)
 
 
 # Adjust inputs and outputs for the median
 # ----------------------------------------
-data0$l_m <- log(data0$bruttolohn)-log(median(data0$bruttolohn,na.rm=TRUE))
-data0$k_m <- log(data0$K_adj)-log(median(data0$K_adj,na.rm=TRUE))
-data0$f_m <- log(data0$fremdeDL)-log(median(data0$fremdeDL,na.rm=TRUE))
-data0$w_m <- log(data0$wage)-log(median(data0$wage,na.rm=TRUE))
-data0$va_m <- log(data0$value_added2)-log(median(data0$value_added2,na.rm=TRUE))
-data0$va3_m <- log(data0$value_added3)-log(median(data0$value_added3,na.rm=TRUE))
+data$l_m <- log(data$bruttolohn)-log(median(data$bruttolohn,na.rm=TRUE))
+data$k_m <- log(data$K_adj)-log(median(data$K_adj,na.rm=TRUE))
+data$f_m <- log(data$fremdeDL)-log(median(data$fremdeDL,na.rm=TRUE))
+data$w_m <- log(data$wage)-log(median(data$wage,na.rm=TRUE))
+data$va_m <- log(data$value_added2)-log(median(data$value_added2,na.rm=TRUE))
+data$va3_m <- log(data$value_added3)-log(median(data$value_added3,na.rm=TRUE))
 
 
 # Logarithmize electricity prices
 # -------------------------------
-data0$p_sa_log <- log(data0$p_sa*100)
-data0$p_TK_log <- log(data0$p_TK*100)
-data0$p_SK_log <- log(data0$p_SK*100)
-data0$p_EVU_log <- log(data0$p_EVU*100)
-data0$p_LV_log <- log(data0$p_LV*100)
-data0$p_HH_log <- log(data0$p_HH*100)
-data0$p_VG_log <- log(data0$p_VG*100)
-data0$p_BC_log <- log(data0$p_BC*100)
+data$p_sa_log <- log(data$p_sa*100)
+data$p_TK_log <- log(data$p_TK*100)
+data$p_SK_log <- log(data$p_SK*100)
+data$p_EVU_log <- log(data$p_EVU*100)
+data$p_LV_log <- log(data$p_LV*100)
+data$p_HH_log <- log(data$p_HH*100)
+data$p_VG_log <- log(data$p_VG*100)
+data$p_BC_log <- log(data$p_BC*100)
 
-data0$p_sa_log[is.na(data0$p_sa_log)==TRUE] <- 0
-data0$p_TK_log[is.na(data0$p_TK_log)==TRUE]<- 0
-data0$p_SK_log[is.na(data0$p_SK_log)==TRUE]<- 0
-data0$p_EVU_log[is.na(data0$p_EVU_log)==TRUE]<- 0
-data0$p_LV_log[is.na(data0$p_LV_log)==TRUE]<- 0
-data0$p_HH_log[is.na(data0$p_HH_log)==TRUE]<- 0
-data0$p_VG_log[is.na(data0$p_VG_log)==TRUE]<- 0
-data0$p_BC_log[is.na(data0$p_BC_log)==TRUE]<- 0
-dstat(data0$p_sa_log,d=2)
+data$p_sa_log[is.na(data$p_sa_log)==TRUE] <- 0
+data$p_TK_log[is.na(data$p_TK_log)==TRUE]<- 0
+data$p_SK_log[is.na(data$p_SK_log)==TRUE]<- 0
+data$p_EVU_log[is.na(data$p_EVU_log)==TRUE]<- 0
+data$p_LV_log[is.na(data$p_LV_log)==TRUE]<- 0
+data$p_HH_log[is.na(data$p_HH_log)==TRUE]<- 0
+data$p_VG_log[is.na(data$p_VG_log)==TRUE]<- 0
+data$p_BC_log[is.na(data$p_BC_log)==TRUE]<- 0
+dstat(data$p_sa_log,d=2)
 
 
 
@@ -375,7 +376,7 @@ dstat(data0$p_sa_log,d=2)
 # ------------------
 # drop pure water firms (analysed separately), pure electricity and gas firms (analysed separately),
 # as well as power and heat plants (analysed separately)
-data0 <- subset(data0,(wa==1 & sa==0 & se==0 & sn==0 & wm==0 & ga==0)==FALSE
+data0 <- subset(data,(wa==1 & sa==0 & se==0 & sn==0 & wm==0 & ga==0)==FALSE
                       & (wa==0 & wm==0 & se==0 & (sa==1 | sn==1 | ga==1))==FALSE
                       & (wa==0 & wm==0 & se==1 & (sa==1 | sn==1 | ga==1))==FALSE
                       & ((se == 1 | wm==1) & ga==0 & wa==0 & sa==0 & sn==0)==FALSE)

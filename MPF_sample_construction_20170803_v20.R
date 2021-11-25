@@ -1839,134 +1839,38 @@ nrow(subset(data_public, size_small==1 | size_med==1 | size_large==1))==nrow(dat
 #================================================================================================
 
 
-#================================================================================================
-# 13.1.1 Divergence between KSE and JAB survey
-#================================================================================================
-
-# Idea: If the values of items that figure both in the KSE and JAB survey differ too much from 
-# each other, discard these observations, since it is unclear which value can be trusted.
-
-# Algorithm: Use correlation measure.
-
-# Exception: Use different thresholds for intermediates variable as the definition of 
-# intermediates differs between the two surveys.
-
-# Note: Keep all observations with cor_* == 0 (i.e., KSE variable = 0) or cor_* == NA 
-# (i.e. JAB variable = 0 or NA), else replacements would be lost.
-
-
-# labour costs
-# ------------
-data_public$out_lohn <- ifelse(is.na(data_public$cor_lohn)==TRUE 
-                                | data_public$cor_lohn==0 
-                                 | (data_public$cor_lohn>0.5 & data_public$cor_lohn<2),0,1)
-summary(as.factor(data_public$out_lohn))
-
-# intermediates
-# -------------
-data_public$out_int <- ifelse(is.na(data_public$cor_int)==TRUE 
-                               | data_public$cor_int==0 
-                               | (data_public$cor_int>0.3 & data_public$cor_int<3),0,1)
-summary(as.factor(data_public$out_int))
-
-# revenues
-# ---------
-data_public$out_umsatz <- ifelse(is.na(data_public$cor_umsatz)==TRUE 
-                                 | data_public$cor_umsatz==0
-                                 | (data_public$cor_umsatz>0.5 & data_public$cor_umsatz<2),0,1)
-summary(as.factor(data_public$out_umsatz))
-
-
-
-# Drop utilities with unit prices above one
-# -----------------------------------------
-data_public$out_p_LV <- ifelse(is.na(data_public$p_LV)==TRUE | data_public$p_LV<=1,0,1)
-summary(as.factor(data_public$out_p_LV))
-
-data_public$out_p_EVU <- ifelse(is.na(data_public$p_EVU)==TRUE | data_public$p_EVU<=1,0,1)
-summary(as.factor(data_public$out_p_EVU))
-
-data_public$out_p_TK <- ifelse(is.na(data_public$p_TK)==TRUE | data_public$p_TK<=1,0,1)
-summary(as.factor(data_public$out_p_TK))
-
-data_public$out_p_SK <- ifelse(is.na(data_public$p_SK)==TRUE | data_public$p_SK<=1,0,1)
-summary(as.factor(data_public$out_p_SK))
-
-data_public$out_p_HH <- ifelse(is.na(data_public$p_HH)==TRUE | data_public$p_HH<=1,0,1)
-summary(as.factor(data_public$out_p_HH))
-
-data_public$out_p_VG <- ifelse(is.na(data_public$p_VG)==TRUE | data_public$p_VG<=1,0,1)
-summary(as.factor(data_public$out_p_VG))
-
-data_public$out_p_BC <- ifelse(is.na(data_public$p_BC)==TRUE | data_public$p_BC<=1,0,1)
-summary(as.factor(data_public$out_p_BC))
-
-data_public$out_p_sa <- ifelse(is.na(data_public$p_sa)==TRUE | data_public$p_sa<=1,0,1)
-summary(as.factor(data_public$out_p_sa))
-
-
-
-# Apply algorithm
-# ---------------
-data_public_clear1 <- subset(data_public, 
-                             out_lohn==0 & out_umsatz==0 & out_int==0 & out_p_sa==0  & out_p_LV==0
-                             & out_p_EVU==0 & out_p_TK==0 & out_p_SK==0 & out_p_HH==0 & out_p_VG==0
-                             & out_p_BC==0 & out_p_sa==0)
-addmargins(table(data_public_clear1$Jahr))
-
-
-
-#================================================================================================
-# 13.1.2 Unplausible input shares
-#================================================================================================
-
-# Drop utilities with input shares above 2
-# ----------------------------------------
-data_public_clear2 <- subset(data_public_clear1, (is.na(wage_share)==TRUE |wage_share <2) 
-                                  & (is.na(service_share)==TRUE | service_share <2)
-                                  & (is.na(int_share)==TRUE | int_share<2))
-addmargins(table(data_public_clear2$Jahr))
-
-
-
-#================================================================================================
-# 13.1.3 Dispersion
-#================================================================================================
-
-
-
 
 # Q99.9 qantile: Drop the right 0.001 tail of the input and output distributions
 # ------------------------------------------------------------------------------
 
-out_q999 <- data_public_clear2$id[as.numeric(data_public_clear2$fremdeDL)> quantile(data_public_clear2$fremdeDL,0.999,na.rm=TRUE)
-                            | as.numeric(data_public_clear2$K_adj)>quantile(data_public_clear2$K_adj,0.999,na.rm=TRUE)
-                            | as.numeric(data_public_clear2$bruttolohn)>quantile(data_public_clear2$bruttolohn,0.999,na.rm=TRUE)
-                            | as.numeric(data_public_clear2$intermediates)>quantile(data_public_clear2$intermediates,0.999,na.rm=TRUE)
-                            | as.numeric(data_public_clear2$revenues)>quantile(data_public_clear2$revenues,0.999,na.rm=TRUE)
+out_q999 <- data_public$id[as.numeric(data_public$fremdeDL)> quantile(data_public$fremdeDL,0.999,na.rm=TRUE)
+                            | as.numeric(data_public$K_adj)>quantile(data_public$K_adj,0.999,na.rm=TRUE)
+                            | as.numeric(data_public$bruttolohn)>quantile(data_public$bruttolohn,0.999,na.rm=TRUE)
+                            | as.numeric(data_public$intermediates)>quantile(data_public$intermediates,0.999,na.rm=TRUE)
+                            | as.numeric(data_public$revenues)>quantile(data_public$revenues,0.999,na.rm=TRUE)
                             ]
 
-outlier_q999 <- data_public_clear2[(data_public_clear2$id %in% c(out_q999)),]
+outlier_q999 <- data_public[(data_public$id %in% c(out_q999)),]
 addmargins(table(outlier_q999$Jahr,dnn="Anzahl Outlier basierend auf q99.9"))
-data_public_clear3 <- data_public_clear2[!(data_public_clear2$id %in% c(out_q999)),]
-addmargins(table(data_public_clear3$Jahr,useNA="ifany"))
+data_public_clear <- data_public[!(data_public$id %in% c(out_q999)),]
+addmargins(table(data_public_clear$Jahr,useNA="ifany"))
 
 
 
 # Q0.001 qantile: Drop the left 0.001 tail of the input and output distributions
 # ------------------------------------------------------------------------------
 
-out_q0001 <- data_public_clear3$id[as.numeric(data_public_clear3$fremdeDL)< quantile(data_public_clear3$fremdeDL,0.001,na.rm=TRUE)
-                             | as.numeric(data_public_clear3$K_adj)<quantile(data_public_clear3$K_adj,0.001,na.rm=TRUE)
-                             | as.numeric(data_public_clear3$bruttolohn)<quantile(data_public_clear3$bruttolohn,0.001,na.rm=TRUE)
-                             | as.numeric(data_public_clear3$intermediates)<quantile(data_public_clear3$intermediates,0.001,na.rm=TRUE)
-                             | as.numeric(data_public_clear3$revenues)<quantile(data_public_clear3$revenues,0.001,na.rm=TRUE)
+out_q0001 <- data_public_clear$id[as.numeric(data_public_clear$fremdeDL)< quantile(data_public_clear$fremdeDL,0.001,na.rm=TRUE)
+                             | as.numeric(data_public_clear$K_adj)<quantile(data_public_clear$K_adj,0.001,na.rm=TRUE)
+                             | as.numeric(data_public_clear$bruttolohn)<quantile(data_public_clear$bruttolohn,0.001,na.rm=TRUE)
+                             | as.numeric(data_public_clear$intermediates)<quantile(data_public_clear$intermediates,0.001,na.rm=TRUE)
+                             | as.numeric(data_public_clear$revenues)<quantile(data_public_clear$revenues,0.001,na.rm=TRUE)
                              ]
 
-outlier_q0001 <- data_public_clear3[(data_public_clear3$id %in% c(out_q0001)),]
+outlier_q0001 <- data_public_clear[(data_public_clear$id %in% c(out_q0001)),]
 addmargins(table(outlier_q0001$Jahr,dnn="Anzahl Outlier basierend auf q0.001"))
-data_public_clear3 <- data_public_clear3[!(data_public_clear3$id %in% c(out_q0001)),]
-addmargins(table(data_public_clear3$Jahr,useNA="ifany"))
+data_public_clear <- data_public_clear[!(data_public_clear$id %in% c(out_q0001)),]
+addmargins(table(data_public_clear$Jahr,useNA="ifany"))
 
 
 #================================================================================================
@@ -1975,20 +1879,21 @@ addmargins(table(data_public_clear3$Jahr,useNA="ifany"))
 
 # Drop all firms without information on legal status, ownership, and settlement structure. Drop
 # the few lignite plants as they block the bootstrap.
-data_public_clear3 <- subset(data_public_clear3,is.na(data_public_clear3$status)==FALSE 
-                	& is.na(data_public_clear3$eigentuemer2)==FALSE
-                	& is.na(data_public_clear3$Siedlung)==FALSE
+# --------------------------------------------------
+data_public_clear <- subset(data_public_clear,is.na(data_public_clear$status)==FALSE 
+                	& is.na(data_public_clear$eigentuemer2)==FALSE
+                	& is.na(data_public_clear$Siedlung)==FALSE
                 	& se_bk==0)
 
 # Drop firms with inconsistent reports on settlement structure
-data_public_clear3 <- subset(data_public_clear3,Siedlung !=5)
+data_public_clear <- subset(data_public_clear,Siedlung !=5)
 
 
 # Choose only firms with positive values in inputs and outputs
 # ------------------------------------------------------------
 # (as we will logarithmise inputs and outputs)
-data_public_clear3 <- subset(data, fremdeDL>0 & K_adj>0 & bruttolohn>0 & value_added3>0)
-addmargins(table(data_public_clear3$year))
+data_public_clear <- subset(data, fremdeDL>0 & K_adj>0 & bruttolohn>0 & value_added3>0)
+addmargins(table(data_public_clear$year))
 
 
 #================================================================================================
@@ -1998,18 +1903,18 @@ addmargins(table(data_public_clear3$year))
 
 # How many observations do we have per year?
 # ------------------------------------------
-addmargins(table(data_public_clear3$Jahr))
+addmargins(table(data_public_clear$Jahr))
 
 
 # with positive values for capital: K_adj>0
 # -----------------------------------------
-data_public_K <- subset(data_public_clear3,K_adj>0)
+data_public_K <- subset(data_public_clear,K_adj>0)
 addmargins(table(data_public_K$Jahr))
 
 
 # with positive values for labour: bruttolohn>0
 # ---------------------------------------------
-data_public_L <- subset(data_public_clear3,bruttolohn>0)
+data_public_L <- subset(data_public_clear,bruttolohn>0)
 addmargins(table(data_public_L$Jahr))
 
 
@@ -2021,14 +1926,14 @@ addmargins(table(data_public_L$Jahr))
 
 # Remove constant variables
 # -------------------------
-data_public_clear3 <- subset(data_public_clear3,select=-c(id_ns,id_he1,id_he2,id_he3,id_he4
+data_public_clear <- subset(data_public_clear,select=-c(id_ns,id_he1,id_he2,id_he3,id_he4
 				,id_th,id_sh,jab,public, se_bk,Lueckenjahre,out_labour,out_lohn
 				,out_int,out_umsatz,out_p_LV,out_p_EVU,out_p_TK,out_p_SK,out_p_HH
 				,out_p_VG,out_p_BC,out_p_sa))
 
 # Export data set
 # ---------------
-write.dta(data_public_clear3,paste(Pfad1,"data_public_single_final_cs_v3.dta",sep=""))
+write.dta(data_public_clear,paste(Pfad1,"data_public_single_final.dta",sep=""))
 
 
 #================================================================================================
