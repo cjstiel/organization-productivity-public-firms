@@ -79,11 +79,26 @@ if (RDC == 1)  {
 sink(paste(Path4, "/Remunicipalization_Corporatization_Outsourcing.log", sep = ""), append = FALSE, type = c("output", "message"), split = TRUE)
 
 
-# run programs
-#--------------
+# Step 1: sample construction
+#----------------------------
 source(paste(Path3, "/01_RCO_sample_construction_v20.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+
+
+# Step 2: descriptive statistics
+#-------------------------------
 source(paste(Path3, "/02_RCO_descriptives_v24.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
-source(paste(Path3, "/03_RCO_main_sample_v180.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+
+
+# Step 3: estimation
+#-------------------
+source(paste(Path3, "/03a_RCO_main_sample_v180.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/03b_RCO_water_v188.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/03c_RCO_electricity_gas_v169.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/03d_RCO_power_heat_v168.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+
+
+# Step 4: sensitivity analyses
+#-----------------------------
 
 
 # close the log file
