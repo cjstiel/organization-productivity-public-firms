@@ -13,7 +13,10 @@
 # --------------
 # part 1: sample construction (01_RCO_sample_construction_v20.R)
 # part 2: data descriptives (02_RCO_descriptives_v24.R)
-# part 3: estimation (03_RCO_main_sample_v180.R, this file) 
+# part 3a: estimation for mixed utilities (03a_RCO_main_sample_v180.R) | this file
+# part 3b: estimation for water utilities (03b_RCO_water_v188.R)
+# part 3c: estimation for electricity and gas utilities (03c_RCO_electricity_gas_v169.R)
+# part 3d: estimation for heat and power plants (03d_RCO_heat_power_plants_v168.R)
 #
 #
 #
@@ -119,6 +122,7 @@ dstat <- function(X,d){
 # routine seeks to minimise.
 #================================================================================================                                                          
 
+
 gmm_moment_condition <- function(betas){
   omega <<- data_gmm$Phi - Inputs_gmm%*%betas -Inputs_fixed%*%betas_fixed
   lag_omega <<- data_gmm$lag_Phi-lag_Inputs_gmm%*%betas - lag_Inputs_fixed%*%betas_fixed
@@ -133,11 +137,11 @@ gmm_moment_condition <- function(betas){
                       #,data_gmm$shareFEW*data_gmm$lag1_privlaw
                       )
   AR1 <<- lm(omega ~ lag_omega + I(lag_omega^2) + I(lag_omega^3) 
-             + data_gmm$lag1_privlaw 
+             + data_gmm$lag1_privlaw
              + I(data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2)
-             + data_gmm$shareF + data_gmm$shareFEW 
+             + data_gmm$shareF + data_gmm$shareFEW
              #+ I(data_gmm$shareF*data_gmm$shareFEW)
-             #+ I(data_gmm$shareF*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2) 
+             #+ I(data_gmm$shareF*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2)
              #+ I(data_gmm$shareFEW*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2)
              #+ I(data_gmm$shareF*data_gmm$lag1_privlaw)
              #+ I(data_gmm$shareFEW*data_gmm$lag1_privlaw)
@@ -149,6 +153,7 @@ gmm_moment_condition <- function(betas){
 }
 
 
+
 #================================================================================================
 # Function boot.acf										                                                             
 # -----------------
@@ -157,85 +162,76 @@ gmm_moment_condition <- function(betas){
 # second stage.    		   
 #================================================================================================
 
+
 boot.acf <- function(data,indices,method){
   data_boot <<- data[indices,]
-  invisible(capture.output(data_bp <<- pdata.frame(data_boot, index=c("id","year"))))
-  first_stage_m <<- lm(va3_m ~ l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2) 
-                      + l_m:f_m + l_m:k_m + f_m:k_m + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log)
-                      + I(wm_NWG*defl_wm_NWG) + I(se_gas*defl_se_eg) + I(se_oil*defl_se_oil) 
-                      + I(se_EE2*log(100)) + suburban + rurald + rurals
-                      + l_m:k_m:f_m + l_m:I(f_m^2) + f_m:I(k_m^2) + l_m:I(k_m^2) + f_m:I(l_m^2) 
-                      + k_m:I(f_m^2) + k_m:I(l_m^2) + I(l_m^2):I(k_m^2) + I(l_m^2):I(f_m^2) 
-                      + I(f_m^2):I(k_m^2) + k_m:I(l_m^2):f_m + l_m:I(k_m^2):f_m + l_m:I(f_m^2):k_m  
+  invisible(capture.output(data_bp <<- pdata.frame(data_boot, index=c("id","Jahr"))))
+  first_stage_m <<- lm(va3_m ~ l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2)
+                      + l_m:f_m + l_m:k_m + f_m:k_m + I(sn*defl_sn) + I(ga*defl_ga) + I(sa*p_sa_log)
+                      + I(se_water*log(100))+ suburban + rurald + rurals+ l_m:k_m:f_m
+                      + l_m:I(f_m^2) + f_m:I(k_m^2) + l_m:I(k_m^2) + f_m:I(l_m^2) + k_m:I(f_m^2)
+                      + k_m:I(l_m^2)
+                      + I(l_m^2):I(k_m^2) + I(l_m^2):I(f_m^2) + I(f_m^2):I(k_m^2)
+                      + k_m:I(l_m^2):f_m + l_m:I(k_m^2):f_m + l_m:I(f_m^2):k_m
                       + f_m:I(l_m^2):I(k_m^2) + k_m:I(l_m^2):I(f_m^2) + l_m:I(k_m^2):I(f_m^2)
                       + I(l_m^2):I(f_m^2):I(k_m^2),data_bp)
-  betas1 <<- as.vector(first_stage_m$coefficients)
   data_bp$Phi <<- first_stage_m$fitted.values
   data_bp$lag_Phi <<- lag(data_bp$Phi)
-  Inputs <<- as.matrix(cbind(rep(1,nrow(data_bp)),data_bp$l_m,data_bp$f_m,data_bp$k_m
-                             ,0.5*(data_bp$l_m)^2,0.5*(data_bp$f_m)^2,0.5*(data_bp$k_m)^2
-                             ,data_bp$ga*data_bp$defl_ga
-                             ,data_bp$wa*data_bp$defl_wa
-                             ,data_bp$sa*data_bp$p_sa_log
-                             ,data_bp$wm_NWG*data_bp$defl_wm_NWG
-                             ,data_bp$se_gas*data_bp$defl_se_eg
-                             ,data_bp$se_oil*data_bp$defl_se_oil
-                             ,data_bp$se_EE2*log(100)
-                            ,data_bp$suburban,data_bp$rurald,data_bp$rurals
-                            ,data_bp$l_m*data_bp$f_m,data_bp$l_m*data_bp$k_m
-                            ,data_bp$f_m*data_bp$k_m))
   data_bp$lag1_privlaw <- lag(data_bp$privlaw)
   data_bp$lag1_eigentuemer2 <- lag(data_bp$eigentuemer2)
   data_bp$lag1_shareF <- lag(data_bp$shareF)
-  data_bp$lag2_shareF <- lag(data_bp$shareF,2)
   data_bp$lag1_shareFEW <- lag(data_bp$shareFEW)
+  Inputs <<- as.matrix(cbind(rep(1,nrow(data_bp)),data_bp$l_m,data_bp$f_m,data_bp$k_m
+                            ,0.5*(data_bp$l_m)^2
+                            ,0.5*(data_bp$f_m)^2,0.5*(data_bp$k_m)^2
+                            ,data_bp$sn*data_bp$defl_sn
+                            ,data_bp$ga*data_bp$defl_ga
+                            ,data_bp$sa*data_bp$p_sa_log
+                            ,data_bp$se_water*log(100)
+                            ,data_bp$suburban,data_bp$rurald,data_bp$rurals
+                            ,data_bp$l_m*data_bp$f_m,data_bp$l_m*data_bp$k_m
+                            ,data_bp$f_m*data_bp$k_m))
   data_gmm <<- subset(data_bp,is.na(lag_Phi)==FALSE)
   n <<- nrow(data_gmm)
-  Inputs_gmm <<- as.matrix(cbind(rep(1,nrow(data_gmm)),data_gmm$l_m,data_gmm$f_m,data_gmm$k_m
-                                 ,0.5*(data_gmm$l_m)^2,0.5*(data_gmm$f_m)^2,0.5*(data_gmm$k_m)^2
-                                 ,data_gmm$ga*data_gmm$defl_ga
-                                 ,data_gmm$wa*data_gmm$defl_wa
-                                 ,data_gmm$sa*data_gmm$p_sa_log
-                                 ,data_gmm$wm_NWG*data_gmm$defl_wm_NWG
-                                 ,data_gmm$se_gas*data_gmm$defl_se_eg
-                                 ,data_gmm$se_oil*data_gmm$defl_se_oil
-                                 ,data_gmm$se_EE2*log(100)
-                                 ,data_gmm$suburban,data_gmm$rurald,data_gmm$rurals
-                                 ,data_gmm$l_m*data_gmm$f_m,data_gmm$l_m*data_gmm$k_m
-                                 ,data_gmm$f_m*data_gmm$k_m))
-  lag_Inputs <<- as.matrix(cbind(rep(1,nrow(data_bp)),lag(data_bp$l_m),lag(data_bp$f_m)
-                                 ,lag(data_bp$k_m),0.5*(lag(data_bp$l_m))^2,0.5*(lag(data_bp$f_m))^2
-                                 ,0.5*(lag(data_bp$k_m))^2
-                                 ,lag(data_bp$ga)*lag(data_bp$defl_ga)
-                                 ,lag(data_bp$wa)*lag(data_bp$defl_wa)
-                                 ,lag(data_bp$sa)*lag(data_bp$p_sa_log)
-                                 ,lag(data_bp$wm_NWG)*lag(data_bp$defl_wm_NWG)
-                                 ,lag(data_bp$se_gas)*lag(data_bp$defl_se_eg)
-                                 ,lag(data_bp$se_oil)*lag(data_bp$defl_se_oil)
-                                 ,lag(data_bp$se_EE2)*log(100)
-                                 ,lag(data_bp$suburban),lag(data_bp$rurald),lag(data_bp$rurals)
-                                 ,lag(data_bp$l_m)*lag(data_bp$f_m)
-                                 ,lag(data_bp$l_m)*lag(data_bp$k_m)
-                                 ,lag(data_bp$f_m)*lag(data_bp$k_m)))
-  lag_Inputs_gmm <<- na.omit(lag_Inputs)
+  Inputs_gmm_all <<- as.matrix(cbind(rep(1,nrow(data_gmm)),data_gmm$l_m,data_gmm$f_m,data_gmm$k_m
+                                    ,0.5*(data_gmm$l_m)^2,0.5*(data_gmm$f_m)^2,0.5*(data_gmm$k_m)^2
+                                    ,data_gmm$sn*data_gmm$defl_sn
+                                    ,data_gmm$ga*data_gmm$defl_ga
+                                    ,data_gmm$sa*data_gmm$p_sa_log
+                                    ,data_gmm$se_water*log(100)
+                                    ,data_gmm$suburban,data_gmm$rurald,data_gmm$rurals
+                                    ,data_gmm$l_m*data_gmm$f_m,data_gmm$l_m*data_gmm$k_m
+                                    ,data_gmm$f_m*data_gmm$k_m))
+  lag_Inputs_all <<- as.matrix(cbind(rep(1,nrow(data_bp)),lag(data_bp$l_m),lag(data_bp$f_m)
+                                    ,lag(data_bp$k_m),0.5*(lag(data_bp$l_m))^2
+                                    ,0.5*(lag(data_bp$f_m))^2,0.5*(lag(data_bp$k_m))^2
+                                    ,lag(data_bp$sn)*lag(data_bp$defl_sn)
+                                    ,lag(data_bp$ga)*lag(data_bp$defl_ga)
+                                    ,lag(data_bp$sa)*lag(data_bp$p_sa_log)
+                                    ,lag(data_bp$se_water)*log(100)
+                                    ,lag(data_bp$suburban),lag(data_bp$rurald),lag(data_bp$rurals)
+                                    ,lag(data_bp$l_m)*lag(data_bp$f_m),lag(data_bp$l_m)*lag(data_bp$k_m)
+                                    ,lag(data_bp$f_m)*lag(data_bp$k_m)))
+  lag_Inputs_gmm_all <<- na.omit(lag_Inputs_all)
+  Inputs_gmm <<- Inputs_gmm_all
   Inputs_fixed <<- as.matrix(rep(0,nrow(data_gmm)))
+  lag_Inputs_gmm <<- lag_Inputs_gmm_all
   lag_Inputs_fixed <<- as.matrix(rep(0,nrow(data_gmm)))
   lag_Inputs_fixed <<- na.omit(lag_Inputs_fixed)
   instr <<- cbind(rep(1,nrow(data_bp)),data_bp$l_m,lag(data_bp$f_m),data_bp$k_m,data_bp$l_m^2
-                  ,lag(data_bp$f_m)^2,data_bp$k_m^2,data_bp$ga*data_bp$defl_ga
-                 ,data_bp$wa*data_bp$defl_wa,lag(data_bp$sa)*lag(data_bp$p_sa_log)
-                 ,data_bp$wm_NWG*data_bp$defl_wm_NWG,data_bp$se_gas*data_bp$defl_se_eg
-                 ,data_bp$se_oil*data_bp$defl_se_oil
-                 ,data_bp$se_EE2*log(100),data_bp$suburban,data_bp$rurald,data_bp$rurals
-                 ,data_bp$l_m*lag(data_bp$f_m),data_bp$l_m*data_bp$k_m,lag(data_bp$f_m)*data_bp$k_m)
+                  ,lag(data_bp$f_m)^2,data_bp$k_m^2
+                  ,lag(data_bp$sn)*lag(data_bp$defl_sn)
+                  ,lag(data_bp$ga)*lag(data_bp$defl_ga)
+                  ,lag(data_bp$sa)*lag(data_bp$p_sa_log)
+                  ,data_bp$se_water*log(100)
+                  ,data_bp$suburban,data_bp$rurald,data_bp$rurals
+                  ,data_bp$l_m*lag(data_bp$f_m),data_bp$l_m*data_bp$k_m,lag(data_bp$f_m)*data_bp$k_m)
   instr_gmm <<- na.omit(instr)
-  starting_values <<- lm(va3_m ~ l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2) 
-                         + l_m:f_m + l_m:k_m + f_m:k_m + I(ga*defl_ga) + I(wa*defl_wa) 
-                         + I(sa*p_sa_log) + I(wm_NWG*defl_wm_NWG) + I(se_gas*defl_se_eg) 
-                         + I(se_oil*defl_se_oil) + I(se_EE2*log(100)) + suburban + rurald + rurals
-                         ,data_bp)
+  starting_values <<- lm(va3_m ~l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2)
+                         + l_m:f_m + l_m:k_m + f_m:k_m + I(sn*defl_sn) + I(ga*defl_ga) 
+                         + I(sa*p_sa_log) + I(se_water*log(100))+ suburban + rurald + rurals,data_bp)
   betas_basic_m <<- as.vector(starting_values$coefficients)
-  initial_betas <<- betas_basic_m[c(1:20)]
+  initial_betas <<- betas_basic_m[c(1:17)]
   betas_fixed <<- 0
   optimization <<- optimx(par=initial_betas,fn=gmm_moment_condition, method=method)
   betas22_boot <<- rbind(optimization$p1[1],optimization$p2[1],optimization$p3[1],optimization$p4[1]
@@ -243,11 +239,9 @@ boot.acf <- function(data,indices,method){
                         ,optimization$p8[1],optimization$p9[1],optimization$p10[1]
                         ,optimization$p11[1],optimization$p12[1],optimization$p13[1]
                         ,optimization$p14[1],optimization$p15[1],optimization$p16[1]
-                        ,optimization$p17[1],optimization$p18[1],optimization$p19[1]
-                        ,optimization$p20[1])
+                        ,optimization$p17[1])
   return(betas22_boot)
 }
-
 
 
 #=================================================================================================
@@ -265,7 +259,7 @@ clusterBootSE<-function(data,method,B){
   # Define index variable
   clusters<-unique(data[,"id"])
   # Generate empty matric for storing the ACF coefficients
-  sterrs <- matrix(NA, nrow=B, ncol=20)
+  sterrs <- matrix(NA, nrow=B, ncol=17)
   # Start sampling
   for(i in 1:B){
     # Sample from firm IDs
@@ -363,16 +357,14 @@ dstat(data$p_sa_log,d=2)
 #=================================================================================================
 
 
-# Define main sample
-# ------------------
-# drop pure water firms (analysed separately), pure electricity and gas firms (analysed separately),
-# as well as power and heat plants (analysed separately)
-data0 <- subset(data,(wa==1 & sa==0 & se==0 & sn==0 & wm==0 & ga==0)==FALSE
-                      & (wa==0 & wm==0 & se==0 & (sa==1 | sn==1 | ga==1))==FALSE
-                      & (wa==0 & wm==0 & se==1 & (sa==1 | sn==1 | ga==1))==FALSE
-                      & ((se == 1 | wm==1) & ga==0 & wa==0 & sa==0 & sn==0)==FALSE)
+# Define electricity and gas sample
+# ---------------------------------
+# drop water firms (analysed separately), heat plants (analysed separately) and allow 
+# only firms that operate in electricity and gas supply. electricity generation is included if it
+# is operated in combination with electricity distribution or retail.
+data0 <- subset(data, (wa==0 & wm==0 & (sa==1 | sn==1 | ga==1)))
 
-data0all <- data0
+data0all <- data
 
 
 # Recode as panel data
@@ -393,12 +385,12 @@ pdim(data_p_all)
 #=================================================================================================
 
 # Regress the share of external services on the following components:
-# shareF = F(size,proximity,wages,innovation,customer structure,technology,corporatisation,
+# shareF = F(size,proximity,wages,investments,customer structure,technology,corporatisation,
 #            ownership)
 
   
-# Basic model with interactions in organisational variables (mixed utilities)
-# ---------------------------------------------------------------------------
+# Basic model with interactions in organisational variables (electricity and gas utilities)
+# -----------------------------------------------------------------------------------------
 out1_OLS4 <- lm(shareF ~  t + I(t^2) 
                  # organisation variables
                  + lag(data_p$privlaw)  + I(lag(data_p$privlaw)*lag(data_p$eigentuemer2))
@@ -406,11 +398,9 @@ out1_OLS4 <- lm(shareF ~  t + I(t^2)
                  # firm size and production process
                  + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
                  # industry and customer structure
-                 + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
-                 + se_sonst
+                 + sn + ga + se_gas + se_oil + se_water + se_sonst
                  # environment
-                 + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
-                 + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
+                 + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV)
                  ,data_p)
 summary(out1_OLS4)
  
@@ -421,23 +411,21 @@ summary(out1_OLS4)
 #=================================================================================================
  
 # Regress the share of procured energy and water on the following components:
-# shareF = F(size,proximity,wages,innovation,customer structure,technology,corporatisation,
+# shareF = F(size,proximity,wages,investments,customer structure,technology,corporatisation,
 #            ownership) 
 
-# Grundmodell mit Interaktionen in Controls in t-1 (mixed utilities)
-# ------------------------------------------------------------------
+# Basic model with interactions in organisational variables (electricity and gas utilities)
+# -----------------------------------------------------------------------------------------
 out2_OLS4 <- lm(shareFEW ~  t + I(t^2)
-                # organisation variale
+                # organisation variables
                 + lag(data_p$privlaw)  + I(lag(data_p$privlaw)*lag(data_p$eigentuemer2))
                 + lag(data_p$shareF)
                 # firm size and production process
                 + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
                 # industry and customer structure
-                + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
-                + se_sonst
+                + sn + ga + se_gas + se_oil + se_water + se_sonst
                 # environment
                 + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
-                + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
                 ,data_p)
 summary(out2_OLS4)
 
@@ -453,7 +441,7 @@ summary(out2_OLS4)
 
 # Model production function as a translog function:
 
-# Output: value added (revenues - materials - energy (own use) - taxes)
+# Output: value added (revenues - materials - energy (own use))
 # Inputs: labour (wage bill), external services, capital
 
 # This obtains the following production function:
@@ -461,25 +449,15 @@ summary(out2_OLS4)
 #                  + beta_ss * s_it^2  + beta_kk * k_it^2 + 0.5 * beta_ls * lit * s_it 
 #                  + 0.5 * b_lk * l_it * k_it + 0.5 * b_ks * k_it * s_it + w_it + u_it
 
-# Add industry and settlement fixed effects (reference category: metropolitain areas):
-# value-added_it = beta_l * l_it + beta_s * s_it + beta_k * k_it  + beta_ll * l_it^2 
-#                  + beta_ss * s_it^2  + beta_kk * k_it^2 + 0.5 * beta_ls * lit * s_it 
-#                  + 0.5 * b_lk * l_it * k_it + 0.5 * b_ks * k_it * s_it
-#                  + gamma_1* sa_it + gamma_2 * sn_it + gamma_3 * se_it + gamma_4 * wa_it 
-#                  + gamma_5 * wm_it + gamma_6 * ga_it + + gamma_7 * suburban_it 
-#                  + gamma_8 * rurald_it + + gamma_8 * rurals_it
-#                  + w_it + u_it
-
 
 first_stage_OLS_m2 <- lm(va3_m ~
                         # production function inputs
                         l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2) 
                          + l_m:f_m + l_m:k_m + f_m:k_m
-                         # sector fixed effects
-                         + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) + I(wm_NWG*defl_wm_NWG) 
-                         # fuel types
-                         + I(se_gas*defl_se_eg) + I(se_oil*defl_se_oil)
-                         + I(se_EE2*log(100))
+                        # Sector fixed effects
+                        +  I(sn*defl_sn) + I(ga*defl_ga) + I(sa*p_sa_log) 
+                        # Fuel types
+                        + I(se_water*log(100))
                          # settlement fixed effects
                          + suburban + rurald + rurals
                          ,data_p)
@@ -504,10 +482,9 @@ first_stage_m <- lm(va3_m ~
                     l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2) 
                     + l_m:f_m + l_m:k_m + f_m:k_m
                     # industry fixed effects
-                    + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) + I(wm_NWG*defl_wm_NWG) 
+                    +  I(sn*defl_sn) + I(ga*defl_ga) + I(sa*p_sa_log)
                     # fuel types
-                    + I(se_gas*defl_se_eg) + I(se_oil*defl_se_oil)
-                    + I(se_EE2*log(100))
+                    + I(se_water*log(100))
                     # settlement fixed effects
                     + suburban + rurald + rurals
                     # proxy terms
@@ -553,11 +530,10 @@ data_p$exp_u_it <- exp(first_stage_m$residuals)
 # Note: The order must be identical to that of the OLS estimation's coefficients. 
 Inputs <- as.matrix(cbind(rep(1,nrow(data_p)),data_p$l_m,data_p$f_m,data_p$k_m,0.5*(data_p$l_m)^2
                           ,0.5*(data_p$f_m)^2,0.5*(data_p$k_m)^2
+                          ,data_p$sn*data_p$defl_sn
                           ,data_p$ga*data_p$defl_ga
-                          ,data_p$wa*data_p$defl_wa,data_p$sa*data_p$p_sa_log
-                          ,data_p$wm_NWG*data_p$defl_wm_NWG
-                          ,data_p$se_gas*data_p$defl_se_eg,data_p$se_oil*data_p$defl_se_oil
-                          ,data_p$se_EE2*log(100)
+                          ,data_p$sa*data_p$p_sa_log
+                          ,data_p$se_water*log(100)
                           ,data_p$suburban,data_p$rurald,data_p$rurals
                           ,data_p$l_m*data_p$f_m,data_p$l_m*data_p$k_m,data_p$f_m*data_p$k_m))
 dim(Inputs)
@@ -565,8 +541,6 @@ dim(Inputs)
 
 # Generate lag for legal form variable
 # ------------------------------------
-data_p$lag1_unlisted <- lag(data_p$unlisted)
-data_p$lag1_listed <- lag(data_p$listed)
 data_p$lag1_privlaw <- lag(data_p$privlaw)
 
 
@@ -593,12 +567,10 @@ n <- nrow(data_gmm)
 # ---------------------------------------------------------------
 Inputs_gmm_all <- as.matrix(cbind(rep(1,nrow(data_gmm)),data_gmm$l_m,data_gmm$f_m,data_gmm$k_m
                                   ,0.5*(data_gmm$l_m)^2,0.5*(data_gmm$f_m)^2,0.5*(data_gmm$k_m)^2
-                                  ,data_gmm$ga*data_gmm$defl_ga
-                                  ,data_gmm$wa*data_gmm$defl_wa,data_gmm$sa*data_gmm$p_sa_log
-                                  ,data_gmm$wm_NWG*data_gmm$defl_wm_NWG
-                                  ,data_gmm$se_gas*data_gmm$defl_se_eg
-                                  ,data_gmm$se_oil*data_gmm$defl_se_oil
-                                  ,data_gmm$se_EE2*log(100)
+                          	  ,data_gmm$sn*data_gmm$defl_sn
+                          	  ,data_gmm$ga*data_gmm$defl_ga
+                          	  ,data_gmm$sa*data_gmm$p_sa_log
+                          	  ,data_gmm$se_water*log(100)
                                   ,data_gmm$suburban,data_gmm$rurald,data_gmm$rurals
                                   ,data_gmm$l_m*data_gmm$f_m,data_gmm$l_m*data_gmm$k_m
                                   ,data_gmm$f_m*data_gmm$k_m))
@@ -610,13 +582,10 @@ dim(Inputs_gmm_all)
 lag_Inputs_all <- as.matrix(cbind(rep(1,nrow(data_p)),lag(data_p$l_m),lag(data_p$f_m)
                                   ,lag(data_p$k_m),0.5*(lag(data_p$l_m))^2
                                   ,0.5*(lag(data_p$f_m))^2,0.5*(lag(data_p$k_m))^2
+                                  ,lag(data_p$sn)*lag(data_p$defl_sn)
                                   ,lag(data_p$ga)*lag(data_p$defl_ga)
-                                  ,lag(data_p$wa)*lag(data_p$defl_wa)
                                   ,lag(data_p$sa)*lag(data_p$p_sa_log)
-                                  ,lag(data_p$wm_NWG)*lag(data_p$defl_wm_NWG)
-                                  ,lag(data_p$se_gas)*lag(data_p$defl_se_eg)
-                                  ,lag(data_p$se_oil)*lag(data_p$defl_se_oil)
-                                  ,lag(data_p$se_EE2)*log(100)
+                                  ,lag(data_p$se_water)*log(100)
                                   ,lag(data_p$suburban),lag(data_p$rurald),lag(data_p$rurals)
                                   ,lag(data_p$l_m)*lag(data_p$f_m),lag(data_p$l_m)*lag(data_p$k_m)
                                   ,lag(data_p$f_m)*lag(data_p$k_m)))
@@ -653,11 +622,9 @@ dim(lag_Inputs_fixed)
 # --------------------------------------
 instr <- cbind(rep(1,nrow(data_p)),data_p$l_m,lag(data_p$f_m),data_p$k_m
                ,data_p$l_m^2,lag(data_p$f_m)^2,data_p$k_m^2
-               ,data_p$ga*data_p$defl_ga
-               ,data_p$wa*data_p$defl_wa,lag(data_p$sa)*lag(data_p$p_sa_log)
-               ,data_p$wm_NWG*data_p$defl_wm_NWG
-               ,data_p$se_gas*data_p$defl_se_eg,data_p$se_oil*data_p$defl_se_oil
-               ,data_p$se_EE2*log(100)
+                ,lag(data_p$sn)*lag(data_p$defl_sn),lag(data_p$ga)*lag(data_p$defl_ga)
+                ,lag(data_p$sa)*lag(data_p$p_sa_log)
+                ,data_p$se_water*log(100)
                ,data_p$suburban,data_p$rurald,data_p$rurals
                ,data_p$l_m*lag(data_p$f_m),data_p$l_m*data_p$k_m,lag(data_p$f_m)*data_p$k_m)
 instr_gmm <- na.omit(instr)
@@ -672,7 +639,7 @@ dim(instr_gmm)
 
 # Choose starting values
 # ----------------------
-initial_betas <- betas_basic_m[c(1:20)]
+initial_betas <- betas_basic_m[c(1:17)]
 betas_fixed <- 0
 
 
@@ -692,8 +659,7 @@ j <- which.min(optimization$value)
 betas2 <- rbind(optimization$p1[j],optimization$p2[j],optimization$p3[j],optimization$p4[j]
                  ,optimization$p5[j],optimization$p6[j],optimization$p7[j],optimization$p8[j]
                  ,optimization$p9[j],optimization$p10[j],optimization$p11[j],optimization$p12[j]
-                 ,optimization$p13[j],optimization$p14[j],optimization$p15[j],optimization$p16[j]
-                 ,optimization$p17[j],optimization$p18[j],optimization$p19[j],optimization$p20[j])
+                 ,optimization$p13[j],optimization$p14[j],optimization$p15[j],optimization$p16[j])
 
 
 # display coefficients
@@ -719,7 +685,7 @@ betas2
 # Boostrap the SE
 # ---------------
 date()
-clusterBootSE(data=data0,method=rownames(optimization)[j],B=999)
+clusterBootSE(data=data0,method=rownames(optimization)[j],B=1999)
 date()
 
 # Check: The first column should correspond to the coefficients 'beta22' from section (4.4). 
@@ -764,21 +730,21 @@ dstat(exp(data_gmm$omega2),d=3)
 # --------------------------------------
 # elasticity_l = b_l + b_ll*l + b_lf*f + b_kl*k
 data_p$elasticity_lohn <- (betas_final[2] + betas_final[5]*Inputs[,2] 
-                           + betas_final[18]*Inputs[,3] + betas_final[19]*Inputs[,4])
+                           + betas_final[15]*Inputs[,3] + betas_final[16]*Inputs[,4])
 
 
 # Calculate output elasticity for external services
 # -------------------------------------------------
 # elasticity_v = b_f + b_ff*f + b_lf*l + b_kv*k
-data_p$elasticity_fdl <- (betas_final[3] + betas_final[6]*Inputs[,3] 
-                          + betas_final[18]*Inputs[,2] + betas_final[20]*Inputs[,4])
+data_p$elasticity_fdl <- (betas_final[3] + betas_final[6]*Inputs[,3] + betas_final[15]*Inputs[,2] 
+                          + betas_final[17]*Inputs[,4])
 
 
 # Calculate output elasticity for capital
 # ---------------------------------------
 # elasticity_k = b_k + b_kk*k + b_lk*l + b_kf*f
-data_p$elasticity_cap <- (betas_final[4] + betas_final[7]*Inputs[,4] 
-                          + betas_final[19]*Inputs[,2] + betas_final[20]*Inputs[,3])
+data_p$elasticity_cap <- (betas_final[4] + betas_final[7]*Inputs[,4] + betas_final[16]*Inputs[,2] 
+                          + betas_final[17]*Inputs[,3])
 
 # Calculate returns to scale
 # --------------------------
@@ -890,11 +856,9 @@ explain_pty2 <- plm(omega2 ~
                    + I(lag1_privlaw*lag1_eigentuemer2) 
                    + shareF + shareFEW 
                    + size_med + size_large
-                   +  I(sn*defl_sn) + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) 
-                   + I(wm_HH*defl_wm_HH) + I(wm_NWG*defl_wm_NWG) 
-                   + I(se_gas*defl_se_eg) + I(se_oil*defl_se_oil) + I(se_hc*defl_se_hc) 
-                   + I(se_waste*log(100)) + I(se_bio*log(100)) 
-                   + I(se_EE*log(100)) + I(se_water*log(100)) + I(se_sonst*log(100))
+                   +  I(sn*defl_sn) + I(ga*defl_ga) + I(sa*p_sa_log) + I(se_gas*defl_se_eg) 
+                   + I(se_oil*defl_se_oil)
+                   + I(se_sonst*log(100)) + I(se_water*log(100))
                    + suburban + rurald + rurals,data=data_p,model="pooling",effect="time"
                    ,index=c("id"))
 summary(explain_pty2)
@@ -912,11 +876,9 @@ dwtest(omega2 ~
        + I(lag1_privlaw*lag1_eigentuemer2) 
        + shareF + shareFEW 
        + size_med + size_large
-       +  I(sn*defl_sn) + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) 
-       + I(wm_HH*defl_wm_HH) + I(wm_NWG*defl_wm_NWG) 
-       + I(se_gas*defl_se_eg) + I(se_oil*defl_se_oil) + I(se_hc*defl_se_hc) 
-       + I(se_waste*log(100)) + I(se_bio*log(100)) 
-       + I(se_EE*log(100)) + I(se_water*log(100)) + I(se_sonst*log(100))
+       + I(sn*defl_sn) + I(ga*defl_ga) + I(sa*p_sa_log) + I(se_gas*defl_se_eg) 
+       + I(se_oil*defl_se_oil)
+       + I(se_sonst*log(100)) + I(se_water*log(100))
        + suburban + rurald + rurals,data=data_p)
 
 

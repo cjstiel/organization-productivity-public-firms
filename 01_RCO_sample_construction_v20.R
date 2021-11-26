@@ -11,9 +11,12 @@
 #
 # file structure
 # --------------
-# part 1: sample construction (01_RCO_sample_construction_v20.R, this file)
+# part 1: sample construction (01_RCO_sample_construction_v20.R) | this file
 # part 2: data descriptives (02_RCO_descriptives_v24.R)
-# part 3: estimation (03_RCO_main_sample_v180.R) 
+# part 3a: estimation for mixed utilities (03a_RCO_main_sample_v180.R)
+# part 3b: estimation for water utilities (03b_RCO_water_v188.R)
+# part 3c: estimation for electricity and gas utilities (03c_RCO_electricity_gas_v169.R)
+# part 3d: estimation for heat and power plants (03d_RCO_heat_power_plants_v168.R)
 #
 #
 #
@@ -1503,6 +1506,12 @@ data_public$value_added3 <- data_public$revenues1 - data_public$intermediates
 cor(data_public$value_added2,data_public$value_added3,use="complete.obs")
 
 
+# Compute value added = revenues (deflated with water PPI) - intermediates (deflated)
+# ----------------------------------------------------------------------------------
+data_public$revenues_wa <- data_public$revenues1/data_public$defl_wa
+data_public$value_addedw <- data_public$revenues_wa - data_public$intermediates
+
+
 
 #================================================================================================
 # 9) Firm-level output prices for electricity
@@ -1855,22 +1864,20 @@ addmargins(table(data_public_clear$Jahr,useNA="ifany"))
 # 13.1.4 Missing values in key variables
 #================================================================================================
 
-# Drop all firms without information on legal status, ownership, and settlement structure. Drop
-# the few lignite plants as they block the bootstrap.
-# --------------------------------------------------
+# Drop all firms without information on legal status, ownership, and settlement structure.
+# ----------------------------------------------------------------------------------------
 data_public_clear <- subset(data_public_clear,is.na(data_public_clear$status)==FALSE 
                 	& is.na(data_public_clear$eigentuemer2)==FALSE
-                	& is.na(data_public_clear$Siedlung)==FALSE
-                	& se_bk==0)
+                	& is.na(data_public_clear$Siedlung)==FALSE)
 
 # Drop firms with inconsistent reports on settlement structure
+# ------------------------------------------------------------
 data_public_clear <- subset(data_public_clear,Siedlung !=5)
-
 
 # Choose only firms with positive values in inputs and outputs
 # ------------------------------------------------------------
 # (as we will logarithmise inputs and outputs)
-data_public_clear <- subset(data, fremdeDL>0 & K_adj>0 & bruttolohn>0 & value_added3>0)
+data_public_clear <- subset(data_public_clear, fremdeDL>0 & K_adj>0 & bruttolohn>0 & value_added3>0)
 addmargins(table(data_public_clear$year))
 
 
@@ -1905,7 +1912,7 @@ addmargins(table(data_public_L$Jahr))
 # Remove constant variables
 # -------------------------
 data_public_clear <- subset(data_public_clear,select=-c(id_ns,id_he1,id_he2,id_he3,id_he4
-				,id_th,id_sh,jab,public, se_bk,Lueckenjahre,out_labour,out_lohn
+				,id_th,id_sh,jab,public,Lueckenjahre,out_labour,out_lohn
 				,out_int,out_umsatz,out_p_LV,out_p_EVU,out_p_TK,out_p_SK,out_p_HH
 				,out_p_VG,out_p_BC,out_p_sa))
 

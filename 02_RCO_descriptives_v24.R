@@ -12,8 +12,11 @@
 # file structure
 # --------------
 # part 1: sample construction (01_RCO_sample_construction_v20.R)
-# part 2: descriptives (02_RCO_descriptives_v24.R, this file)
-# part 3: estimation (03_RCO_main_sample_v180.R) 
+# part 2: descriptives (02_RCO_descriptives_v24.R) | this file
+# part 3a: estimation for mixed utilities (03a_RCO_main_sample_v180.R)
+# part 3b: estimation for water utilities (03b_RCO_water_v188.R)
+# part 3c: estimation for electricity and gas utilities (03c_RCO_electricity_gas_v169.R)
+# part 3d: estimation for heat and power plants (03d_RCO_heat_power_plants_v168.R)
 #
 #
 #
