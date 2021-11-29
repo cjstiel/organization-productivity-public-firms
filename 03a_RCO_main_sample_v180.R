@@ -1,23 +1,33 @@
 #================================================================================================
 #
-# author: Caroline Stiel, DIW Berlin (German Institute for Economic Research)
+# author: Caroline Stiel, DIW Berlin (German Institute for Economic Research), 2019
 #
 #================================================================================================
 #
-# Title: Remunicipalization, Corporatization, and Outsourcing: Public Firm Performance after  
+# title: Remunicipalization, Corporatization, and Outsourcing: Public Firm Performance after  
 #        Reorganization
 # ------------------------------------------------------------------------------------------------
 #
 #
-# file structure
-# --------------
-# part 1: sample construction (01_RCO_sample_construction_v20.R)
-# part 2: data descriptives (02_RCO_descriptives_v24.R)
-# part 3a: estimation for mixed utilities (03a_RCO_main_sample_v180.R) | this file
-# part 3b: estimation for water utilities (03b_RCO_water_v188.R)
-# part 3c: estimation for electricity and gas utilities (03c_RCO_electricity_gas_v169.R)
-# part 3d: estimation for heat and power plants (03d_RCO_heat_power_plants_v168.R)
-#
+# structure
+# ---------
+# PART 1: sample construction (01_RCO_sample_construction_v20.R)
+# PART 2: data descriptives (02_RCO_descriptives_v24.R)
+# PART 3: basic estimation
+#      3a: estimation for mixed utilities (03a_RCO_main_sample_v180.R) | this file
+#      3b: estimation for water utilities (03b_RCO_water_v188.R)
+#      3c: estimation for electricity and gas utilities (03c_RCO_electricity_gas_v169.R)
+#      3d: estimation for heat and power plants (03d_RCO_heat_power_plants_v168.R)
+# PART 4: estimation with interactions in LOM
+#      4a: interactions for mixed utilities (04a_RCO_interactions_main_v184.R)
+#      4b: interactions for water (04b_RCO_interactions_water_v189.R)
+#      4c: interactions for elec&gas (04c_RCO__interactions_elecgas_v170.R)
+#      4d: interactions for heat&power (04d_RCO_interactions_heatpower_v187.R)
+# PART 5: sensitivity analyses
+#      5a: excludes gas utilities (05a_RCO_SensAn_wo_gas_v172.R)
+#      5b: lag outsourcing (05b_RCO_SensAn_lag1_out_v173.R)
+#      5c: lag2 outsourcing (05c_RCO_SensAn_lag2_out_v174.R)
+#      5d: time-varying pdt technology (05d_RCO_SensAn_time_v183.R)
 #
 #
 #================================================================================================
@@ -129,21 +139,11 @@ gmm_moment_condition <- function(betas){
                       ,data_gmm$lag1_privlaw
                       ,data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
                       ,data_gmm$shareF,data_gmm$shareFEW
-                      #,data_gmm$shareF*data_gmm$shareFEW
-                      #,data_gmm$shareF*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
-                      #,data_gmm$shareFEW*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
-                      #,data_gmm$shareF*data_gmm$lag1_privlaw
-                      #,data_gmm$shareFEW*data_gmm$lag1_privlaw
                       )
   AR1 <<- lm(omega ~ lag_omega + I(lag_omega^2) + I(lag_omega^3) 
              + data_gmm$lag1_privlaw 
              + I(data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2)
              + data_gmm$shareF + data_gmm$shareFEW 
-             #+ I(data_gmm$shareF*data_gmm$shareFEW)
-             #+ I(data_gmm$shareF*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2) 
-             #+ I(data_gmm$shareFEW*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2)
-             #+ I(data_gmm$shareF*data_gmm$lag1_privlaw)
-             #+ I(data_gmm$shareFEW*data_gmm$lag1_privlaw)
              )
   g_b <<- as.vector(AR1$coefficients)
   innovation <<- omega - omega_pol%*%g_b
@@ -454,10 +454,11 @@ summary(out2_OLS4)
 # 3) Structural production function estimation (estimates TFP)				    	
 #=================================================================================================
 
+#=================================================================================================
+# 3.1 First-stage estimation (OLS)                         
+#=================================================================================================
 
-#=================================================================================================
-# 3.1 base model with OLS                                            
-#=================================================================================================
+# First stage OLS estimation in ACF (2005). Eliminates error u_it.
 
 # Model production function as a translog function:
 
@@ -467,34 +468,7 @@ summary(out2_OLS4)
 # This obtains the following production function:
 # value-added_it = beta_l * l_it + beta_s * s_it + beta_k * k_it  + beta_ll * l_it^2 
 #                  + beta_ss * s_it^2  + beta_kk * k_it^2 + 0.5 * beta_ls * lit * s_it 
-#                  + 0.5 * b_lk * l_it * k_it + 0.5 * b_ks * k_it * s_it + w_it + u_it
-
-
-first_stage_OLS_m2 <- lm(va3_m ~
-                        # production function inputs
-                        l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2) 
-                         + l_m:f_m + l_m:k_m + f_m:k_m
-                         # sector fixed effects
-                         + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) + I(wm_NWG*defl_wm_NWG) 
-                         # fuel types
-                         + I(se_gas*defl_se_eg) + I(se_oil*defl_se_oil)
-                         + I(se_EE2*log(100))
-                         # settlement fixed effects
-                         + suburban + rurald + rurals
-                         ,data_p)
-summary(first_stage_OLS_m2)
-
-
-# Store coefficients
-betas_basic_m <- as.vector(first_stage_OLS_m2$coefficients)
-
-
-
-#=================================================================================================
-# 3.2 First-stage estimation (OLS)                         
-#=================================================================================================
-
-# First stage OLS estimation in ACF (2005). Eliminates error u_it.
+#                  + 0.5 * b_lk * l_it * k_it + 0.5 * b_ks * k_it * s_it + omega_it + u_it
 
 # Production function 
 # -------------------
@@ -544,7 +518,7 @@ data_p$exp_u_it <- exp(first_stage_m$residuals)
 
 
 #=================================================================================================
-# 3.3  Second-stage estimation: Preparing the lags
+# 3.2  Second-stage estimation: Preparing the lags
 #=================================================================================================
 
 # Combine all inputs in a matrix (full first-stage sample)
@@ -564,8 +538,6 @@ dim(Inputs)
 
 # Generate lag for legal form variable
 # ------------------------------------
-data_p$lag1_unlisted <- lag(data_p$unlisted)
-data_p$lag1_listed <- lag(data_p$listed)
 data_p$lag1_privlaw <- lag(data_p$privlaw)
 
 
@@ -661,6 +633,33 @@ instr <- cbind(rep(1,nrow(data_p)),data_p$l_m,lag(data_p$f_m),data_p$k_m
                ,data_p$l_m*lag(data_p$f_m),data_p$l_m*data_p$k_m,lag(data_p$f_m)*data_p$k_m)
 instr_gmm <- na.omit(instr)
 dim(instr_gmm)
+
+
+#=================================================================================================
+# 3.3 Compute starting values for GMM                                             
+#=================================================================================================
+
+
+# Run OLS to obtain starting values for the GMM procedure
+# -------------------------------------------------------
+starting_values_OLS <- lm(va3_m ~
+                        # production function inputs
+                        l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2) 
+                         + l_m:f_m + l_m:k_m + f_m:k_m
+                         # sector fixed effects
+                         + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) + I(wm_NWG*defl_wm_NWG) 
+                         # fuel types
+                         + I(se_gas*defl_se_eg) + I(se_oil*defl_se_oil)
+                         + I(se_EE2*log(100))
+                         # settlement fixed effects
+                         + suburban + rurald + rurals
+                         ,data_p)
+summary(starting_values_OLS)
+
+
+# Store coefficients
+# ------------------
+betas_basic_m <- as.vector(starting_values_OLS$coefficients)
 
 
 #=================================================================================================

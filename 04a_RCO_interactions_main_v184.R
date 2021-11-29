@@ -13,7 +13,7 @@
 # ---------
 # PART 1: sample construction (01_RCO_sample_construction_v20.R)
 # PART 2: data descriptives (02_RCO_descriptives_v24.R)
-# PART 3: estimation basic
+# PART 3: basic estimation
 #      3a: estimation for mixed utilities (03a_RCO_main_sample_v180.R)
 #      3b: estimation for water utilities (03b_RCO_water_v188.R)
 #      3c: estimation for electricity and gas utilities (03c_RCO_electricity_gas_v169.R)
@@ -139,21 +139,21 @@ gmm_moment_condition <- function(betas){
                       ,data_gmm$lag1_privlaw
                       ,data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
                       ,data_gmm$shareF,data_gmm$shareFEW
-                      #,data_gmm$shareF*data_gmm$shareFEW
-                      #,data_gmm$shareF*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
-                      #,data_gmm$shareFEW*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
-                      #,data_gmm$shareF*data_gmm$lag1_privlaw
-                      #,data_gmm$shareFEW*data_gmm$lag1_privlaw
+                      ,data_gmm$shareF*data_gmm$shareFEW
+                      ,data_gmm$shareF*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
+                      ,data_gmm$shareFEW*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
+                      ,data_gmm$shareF*data_gmm$lag1_privlaw
+                      ,data_gmm$shareFEW*data_gmm$lag1_privlaw
                       )
   AR1 <<- lm(omega ~ lag_omega + I(lag_omega^2) + I(lag_omega^3) 
              + data_gmm$lag1_privlaw 
              + I(data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2)
              + data_gmm$shareF + data_gmm$shareFEW 
-             #+ I(data_gmm$shareF*data_gmm$shareFEW)
-             #+ I(data_gmm$shareF*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2) 
-             #+ I(data_gmm$shareFEW*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2)
-             #+ I(data_gmm$shareF*data_gmm$lag1_privlaw)
-             #+ I(data_gmm$shareFEW*data_gmm$lag1_privlaw)
+             + I(data_gmm$shareF*data_gmm$shareFEW)
+             + I(data_gmm$shareF*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2) 
+             + I(data_gmm$shareFEW*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2)
+             + I(data_gmm$shareF*data_gmm$lag1_privlaw)
+             + I(data_gmm$shareFEW*data_gmm$lag1_privlaw)
              )
   g_b <<- as.vector(AR1$coefficients)
   innovation <<- omega - omega_pol%*%g_b
@@ -403,71 +403,15 @@ pdim(data_p_all)
 
 
 #=================================================================================================
-#     2) Start Analysis: reorganisation choice                                         
-#=================================================================================================
-
-#=================================================================================================
-# 2.1 Outsourcing 1: External services
-#=================================================================================================
-
-# Regress the share of external services on the following components:
-# shareF = F(size,proximity,wages,investments,customer structure,technology,corporatisation,
-#            ownership)
-
-  
-# Basic model with interactions in organisational variables (mixed utilities)
-# ---------------------------------------------------------------------------
-out1_OLS4 <- lm(shareF ~  t + I(t^2) 
-                 # organisation variables
-                 + lag(data_p$privlaw)  + I(lag(data_p$privlaw)*lag(data_p$eigentuemer2))
-                 + lag(data_p$shareFEW)
-                 # firm size and production process
-                 + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
-                 # industry and customer structure
-                 + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
-                 + se_sonst
-                 # environment
-                 + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
-                 + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
-                 ,data_p)
-summary(out1_OLS4)
- 
- 
-
-#=================================================================================================
-# 2.2 Outsourcing 2: Production
-#=================================================================================================
- 
-# Regress the share of procured energy and water on the following components:
-# shareF = F(size,proximity,wages,investments,customer structure,technology,corporatisation,
-#            ownership) 
-
-# Basic model with interactions in organisational variables (mixed utilities)
-# ---------------------------------------------------------------------------
-out2_OLS4 <- lm(shareFEW ~  t + I(t^2)
-                # organisation variables
-                + lag(data_p$privlaw)  + I(lag(data_p$privlaw)*lag(data_p$eigentuemer2))
-                + lag(data_p$shareF)
-                # firm size and production process
-                + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
-                # industry and customer structure
-                + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
-                + se_sonst
-                # environment
-                + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
-                + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
-                ,data_p)
-summary(out2_OLS4)
-
-
-#=================================================================================================
-# 3) Structural production function estimation (estimates TFP)				    	
+# 2) Start Analysis: Structural production function estimation (estimates TFP)				    	
 #=================================================================================================
 
 
 #=================================================================================================
-# 3.1 base model with OLS                                            
+# 2.1 First-stage estimation (OLS)                         
 #=================================================================================================
+
+# First stage OLS estimation in ACF (2005). Eliminates error u_it.
 
 # Model production function as a translog function:
 
@@ -479,35 +423,6 @@ summary(out2_OLS4)
 #                  + beta_ss * s_it^2  + beta_kk * k_it^2 + 0.5 * beta_ls * lit * s_it 
 #                  + 0.5 * b_lk * l_it * k_it + 0.5 * b_ks * k_it * s_it + w_it + u_it
 
-
-first_stage_OLS_m2 <- lm(va3_m ~
-                        # production function inputs
-                        l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2) 
-                         + l_m:f_m + l_m:k_m + f_m:k_m
-                         # sector fixed effects
-                         + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) + I(wm_NWG*defl_wm_NWG) 
-                         # fuel types
-                         + I(se_gas*defl_se_eg) + I(se_oil*defl_se_oil)
-                         + I(se_EE2*log(100))
-                         # settlement fixed effects
-                         + suburban + rurald + rurals
-                         ,data_p)
-summary(first_stage_OLS_m2)
-
-
-# Store coefficients
-betas_basic_m <- as.vector(first_stage_OLS_m2$coefficients)
-
-
-
-#=================================================================================================
-# 3.2 First-stage estimation (OLS)                         
-#=================================================================================================
-
-# First stage OLS estimation in ACF (2005). Eliminates error u_it.
-
-# Production function 
-# -------------------
 first_stage_m <- lm(va3_m ~
                     # production function inputs
                     l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2) 
@@ -554,7 +469,7 @@ data_p$exp_u_it <- exp(first_stage_m$residuals)
 
 
 #=================================================================================================
-# 3.3  Second-stage estimation: Preparing the lags
+# 2.2  Second-stage estimation: Preparing the lags
 #=================================================================================================
 
 # Combine all inputs in a matrix (full first-stage sample)
@@ -673,8 +588,36 @@ instr_gmm <- na.omit(instr)
 dim(instr_gmm)
 
 
+
 #=================================================================================================
-# 3.4  Second-stage estimation: GMM optimisation     
+# 2.3 Compute starting values for GMM                                           
+#=================================================================================================
+
+# Run OLS to obtain starting values for the GMM procedure
+# -------------------------------------------------------
+starting_values_OLS <- lm(va3_m ~
+                        # production function inputs
+                        l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2) 
+                         + l_m:f_m + l_m:k_m + f_m:k_m
+                         # sector fixed effects
+                         + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) + I(wm_NWG*defl_wm_NWG) 
+                         # fuel types
+                         + I(se_gas*defl_se_eg) + I(se_oil*defl_se_oil)
+                         + I(se_EE2*log(100))
+                         # settlement fixed effects
+                         + suburban + rurald + rurals
+                         ,data_p)
+summary(starting_values_OLS)
+
+
+# Store coefficients
+# ------------------
+betas_basic_m <- as.vector(starting_values_OLS$coefficients)
+
+
+
+#=================================================================================================
+# 2.4  Second-stage estimation: GMM optimisation     
 #=================================================================================================
 
 # The GMM's objective function is the moment condition E[(Z'v)'*(Z'v)]=0.
@@ -711,7 +654,7 @@ betas2
 
 
 #=================================================================================================
-# 3.5 Bootstrapping the SE              
+# 2.5 Bootstrapping the SE              
 #=================================================================================================
 
 # In this step, we bootstrap the SE for the coefficients from the second stage.
@@ -735,12 +678,12 @@ date()
 
 
 #=================================================================================================
-# 4) Results			                               
+# 3) Results			                               
 #=================================================================================================
 
 
 #=================================================================================================
-# 4.1 Calculating productivity (TFP)
+# 3.1 Calculating productivity (TFP)
 #=================================================================================================
 
 
@@ -757,7 +700,7 @@ data_p$omega2e <- exp(data_p$Phi - Inputs%*%betas_final)
 
 
 #=================================================================================================
-# 4.2 Productivity dispersion
+# 3.2 Productivity dispersion
 #=================================================================================================
 
 dstat(data_p$omega2e,d=3)
@@ -765,7 +708,7 @@ dstat(exp(data_gmm$omega2),d=3)
 
 
 #=================================================================================================
-# 4.3 Output elasticities                                                     
+# 3.3 Output elasticities                                                     
 #=================================================================================================
 
 
@@ -820,12 +763,12 @@ addmargins(table(data_p$year[data_p$rts>1],useNA="ifany",dnn="IRS"))
 
 
 #=================================================================================================
-# 5) Link between reorganisation and productivity
+# 4) Link between reorganisation and productivity
 #=================================================================================================
 
 
 #=================================================================================================
-# 5.1 Productivity growth (Markov process for productivity)       
+# 4.1 Productivity growth (Markov process for productivity)       
 #=================================================================================================
 
 
@@ -842,6 +785,11 @@ AR1_expost <- plm(omega2 ~ lag_omega2 + I(lag_omega2^2) + I(lag_omega2^3)
                   + lag1_privlaw
                   + I(lag1_privlaw*lag1_eigentuemer2) 
                   + shareF + shareFEW
+                  + I(shareF*shareFEW)
+                  + I(shareF*lag1_privlaw*lag1_eigentuemer2)
+                  + I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
+                  + I(shareF*lag1_privlaw)
+                  + I(shareFEW*lag1_privlaw)
                   ,data=data_gmm,model="pooling",effect="time", index=c("id"))
 summary(AR1_expost)
 
@@ -849,10 +797,15 @@ summary(AR1_expost)
 # Is autocorrelation a concern (Durbin-Watson test)?
 # --------------------------------------------------
 dwtest(omega2 ~ lag_omega2 + I(lag_omega2^2) + I(lag_omega2^3) 
-       + lag1_privlaw
-       + I(lag1_privlaw*lag1_eigentuemer2) 
+       + lag1_privlaw 
+       + I(lag1_privlaw*lag1_eigentuemer2)
        + shareF 
        + shareFEW
+       + I(shareF*shareFEW)
+       + I(shareF*lag1_privlaw*lag1_eigentuemer2)
+       + I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
+       + I(shareF*lag1_privlaw)
+       + I(shareFEW*lag1_privlaw)
        ,data=data_gmm)
 
 
@@ -879,8 +832,38 @@ linearHypothesis(AR1_expost
                  ,vcov=vcovHC(AR1_expost,method="arellano",cluster=c("group")))
 
 
+# Hypothesis test for mixed ownership & outsourcing
+# --------------------------------------------------
+# Does mixed ownership significantly alter the productivity effect of service outsourcing?
+linearHypothesis(AR1_expost
+                 ,"I(shareF * lag1_privlaw * lag1_eigentuemer2)- I(shareF * lag1_privlaw)=0"
+                 ,vcov=vcovHC(AR1_expost,method="arellano",cluster=c("group")))
+
+# Does mixed ownership significantly alter the productivity effect of production outsourcing?
+linearHypothesis(AR1_expost
+                 ,"I(shareFEW * lag1_privlaw * lag1_eigentuemer2)- I(shareFEW * lag1_privlaw)=0"
+                 ,vcov=vcovHC(AR1_expost,method="arellano",cluster=c("group")))
+
+
+
+# Hypothesis test for legal form & outsourcing
+# --------------------------------------------
+# Are there significant differences in the productivity effect of service outsourcing between
+# utilities of different legal form?
+linearHypothesis(AR1_expost
+                 ,"I(shareF * lag1_privlaw) - shareF=0"
+                 ,vcov=vcovHC(AR1_expost,method="arellano",cluster=c("group")))
+
+
+# Are there significant differences in the productivity effect of production outsourcing between
+# utilities of different legal form?
+linearHypothesis(AR1_expost
+                 ,"I(shareFEW * lag1_privlaw) - shareFEW=0"
+                 ,vcov=vcovHC(AR1_expost,method="arellano",cluster=c("group")))
+
+
 #=================================================================================================
-# 5.2 Productivity levels
+# 4.2 Productivity levels
 #=================================================================================================
 
 
@@ -896,8 +879,13 @@ data_p <- pdata.frame(as.data.frame(data_p),index=c("id","year"),row.names=FALSE
 
 explain_pty2 <- plm(omega2 ~ 
                    lag1_privlaw
-                   + I(lag1_privlaw*lag1_eigentuemer2) 
+                   + I(lag1_privlaw*lag1_eigentuemer2)
                    + shareF + shareFEW 
+                   + I(shareF*shareFEW)
+                   + I(shareF*lag1_privlaw*lag1_eigentuemer2)
+                   + I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
+                   + I(shareF*lag1_privlaw)
+                   + I(shareFEW*lag1_privlaw)
                    + size_med + size_large
                    +  I(sn*defl_sn) + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) 
                    + I(wm_HH*defl_wm_HH) + I(wm_NWG*defl_wm_NWG) 
@@ -918,8 +906,13 @@ bptest(explain_pty2)
 # --------------------------------------------------
 dwtest(omega2 ~ 
        lag1_privlaw
-       + I(lag1_privlaw*lag1_eigentuemer2) 
+       + I(lag1_privlaw*lag1_eigentuemer2)
        + shareF + shareFEW 
+       + I(shareF*shareFEW)
+       + I(shareF*lag1_privlaw*lag1_eigentuemer2)
+       + I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
+       + I(shareF*lag1_privlaw)
+       + I(shareFEW*lag1_privlaw)
        + size_med + size_large
        +  I(sn*defl_sn) + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) 
        + I(wm_HH*defl_wm_HH) + I(wm_NWG*defl_wm_NWG) 
@@ -943,6 +936,35 @@ coeftest(explain_pty2,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("grou
 
 linearHypothesis(explain_pty2
                  ,"I(lag1_privlaw * lag1_eigentuemer2)-lag1_privlaw=0"
+                 ,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
+
+
+# Hypothesis test for mixed ownership & outsourcing
+# --------------------------------------------------
+# Does mixed ownership significantly alter the productivity effect of service outsourcing?
+linearHypothesis(explain_pty2
+                 ,"I(shareF * lag1_privlaw * lag1_eigentuemer2)- I(shareF * lag1_privlaw)=0"
+                 ,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
+
+# Does mixed ownership significantly alter the productivity effect of production outsourcing?
+linearHypothesis(explain_pty2
+                 ,"I(shareFEW * lag1_privlaw * lag1_eigentuemer2)- I(shareFEW * lag1_privlaw)=0"
+                 ,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
+
+
+
+# Hypothesis test for legal form & outsourcing
+# --------------------------------------------
+# Are there significant differences in the productivity effect of service outsourcing between
+# utilities of different legal form?
+linearHypothesis(explain_pty2
+                 ,"I(shareF * lag1_privlaw) - shareF=0"
+                 ,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
+
+# Are there significant differences in the productivity effect of production outsourcing between
+# utilities of different legal form?
+linearHypothesis(explain_pty2
+                 ,"I(shareFEW * lag1_privlaw) - shareFEW=0"
                  ,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
 
 
