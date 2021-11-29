@@ -11,25 +11,33 @@
 #
 # structure
 # ---------
-# PART 1: sample construction (01_RCO_sample_construction_v20.R)
-# PART 2: data descriptives (02_RCO_descriptives_v24.R) | this file
+# PART 1: sample construction (01_RCO_sample_construction.R)
+# PART 2: data descriptives (02_RCO_descriptives.R) | this file
 # PART 3: basic estimation
-#      3a: estimation for mixed utilities (03a_RCO_main_sample_v180.R)
-#      3b: estimation for water utilities (03b_RCO_water_v188.R)
-#      3c: estimation for electricity and gas utilities (03c_RCO_electricity_gas_v169.R)
-#      3d: estimation for heat and power plants (03d_RCO_heat_power_plants_v168.R)
+#      3a: estimation for mixed utilities (03a_RCO_main_sample.R)
+#      3b: estimation for water utilities (03b_RCO_water.R)
+#      3c: estimation for electricity and gas utilities (03c_RCO_electricity_gas.R)
+#      3d: estimation for heat and power plants (03d_RCO_heat_power_plants.R)
 # PART 4: estimation with interactions in LOM
-#      4a: interactions for mixed utilities (04a_RCO_interactions_main_v184.R)
-#      4b: interactions for water (04b_RCO_interactions_water_v189.R)
-#      4c: interactions for elec&gas (04c_RCO__interactions_elecgas_v170.R)
-#      4d: interactions for heat&power (04d_RCO_interactions_heatpower_v187.R)
+#      4a: interactions for mixed utilities (04a_RCO_interactions_main.R)
+#      4b: interactions for water (04b_RCO_interactions_water.R)
+#      4c: interactions for elec&gas (04c_RCO__interactions_elecgas.R)
+#      4d: interactions for heat&power (04d_RCO_interactions_heatpower.R)
 # PART 5: sensitivity analyses
-#      5a: excludes gas utilities (05a_RCO_SensAn_wo_gas_v172.R)
-#      5b: lag outsourcing (05b_RCO_SensAn_lag1_out_v173.R)
-#      5c: lag2 outsourcing (05c_RCO_SensAn_lag2_out_v174.R)
-#      5d: time-varying pdt technology (05d_RCO_SensAn_time_v183.R)
+#      5a: excludes gas utilities (05a_RCO_SensAn_wo_gas.R)
+#      5b: lag outsourcing (05b_RCO_SensAn_lag1_out.R)
+#      5c: lag2 outsourcing (05c_RCO_SensAn_lag2_out.R)
+#      5d: time-varying pdt technology (05d_RCO_SensAn_time.R)
 #
 #
+# -----------------------------------------------------------------------------------------------
+#
+#				PART 2: DATA DESCRIPTIVES
+'
+# -----------------------------------------------------------------------------------------------
+# content: This file computes basic descriptive statistics of the estimation sample (Tables 5 
+# and 6 in the paper, Figures 1 to 3).
+# version: 24
 #================================================================================================
 
 

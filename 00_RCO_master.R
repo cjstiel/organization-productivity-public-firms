@@ -81,36 +81,36 @@ sink(paste(Path4, "/Remunicipalization_Corporatization_Outsourcing.log", sep = "
 
 # Step 1: sample construction
 #----------------------------
-source(paste(Path3, "/01_RCO_sample_construction_v20.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/01_RCO_sample_construction.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
 
 
 # Step 2: descriptive statistics
 #-------------------------------
-source(paste(Path3, "/02_RCO_descriptives_v24.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/02_RCO_descriptives.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
 
 
 # Step 3: basic estimation
 #-------------------------
-source(paste(Path3, "/03a_RCO_main_sample_v180.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
-source(paste(Path3, "/03b_RCO_water_v188.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
-source(paste(Path3, "/03c_RCO_electricity_gas_v169.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
-source(paste(Path3, "/03d_RCO_power_heat_v168.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/03a_RCO_main_sample.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/03b_RCO_water.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/03c_RCO_electricity_gas.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/03d_RCO_power_heat.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
 
 
 # Step 4: estimation with interactions in LOM
 #--------------------------------------------
-source(paste(Path3, "/04a_RCO_interactions_main_v184.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
-source(paste(Path3, "/04b_RCO_interactions_water_v189.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
-source(paste(Path3, "/04c_RCO__interactions_elecgas_v170.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
-source(paste(Path3, "/04d_RCO_interactions_heatpower_v187.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/04a_RCO_interactions_main.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/04b_RCO_interactions_water.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/04c_RCO__interactions_elecgas.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/04d_RCO_interactions_heatpower.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
 
 
 # Step 5: sensitivity analyses
 #-----------------------------
-source(paste(Path3, "/05a_RCO_SensAn_wo_gas_v172.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
-source(paste(Path3, "/05b_RCO_SensAn_lag1_out_v173.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
-source(paste(Path3, "/05c_RCO_SensAn_lag2_out_v174.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
-source(paste(Path3, "/05d_RCO_SensAn_time_v183.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/05a_RCO_SensAn_wo_gas.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/05b_RCO_SensAn_lag1_out.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/05c_RCO_SensAn_lag2_out.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
+source(paste(Path3, "/05d_RCO_SensAn_time.R", sep = ""), echo = TRUE, max.deparse.length = 99999)
 
 
 
