@@ -7,8 +7,8 @@
 ### Projektleitung: Astrid Cullmann (DIW Berlin)
 ### Datengrundlage: AFiD-Panel Energieunternehmen & Energiebetriebe, JAB, URS (Organschaft)
 ### 
-### Dateiname des Programmcodes: Integriert_Schaetzung_20170825_v173_cs.R
-### erstellt: 25.08.2017
+### Dateiname des Programmcodes: Integriert_Schaetzung_20181211_v182_cs.R
+### erstellt: 11.12.2018
 ### von: Caroline Stiel
 ### E-Mail: cstiel@diw.de
 ### Tel. 030 89789 514
@@ -33,11 +33,11 @@
 ###            Methode geschätzt.
 ####################################################################################################
 ###
-### Version 173:  - Formulierung mit Translog-Modell | Wagebill | Disaggregierte Daten
+### Version 182:  - Formulierung mit Translog-Modell | Wagebill | Disaggregierte Daten
 ###               - Mixed Utilities ohne Wasserfirmen und ohne reine Strom-/Gas-DSOs/Retailer sowie 
 ###                 ohne reine Erzeuger (Strom und Wärme) 2003-2014
-###		  - Regress Pty mit log(omega)
-###               - Sensitivitätsanalyse shareF t-1, mit SE
+###		  - Zusammenfassung GmbH & AG
+###               - Sensitivitätsanalyse shareF t-2, mit SE
 #############################  Start Analyse #######################################################
 
 
@@ -55,16 +55,16 @@ rm(list=ls())
 ########################################
 
 # Arbeitsdateien:
-#Pfad1<-"Q:\\AFS\\55_FDZ\\Forschungsprojekte\\2012-2094 DIW - Richter (4)\\Arbeitsdateien\\"
+Pfad1<-"Q:\\AFS\\55_FDZ\\Forschungsprojekte\\2012-2094 DIW - Richter (4)\\Arbeitsdateien\\"
 
 # Originaldaten:
-#Pfad2<-"Q:\\AFS\\55_FDZ\\Forschungsprojekte\\2012-2094 DIW - Richter (4)\\Daten\\" 
+Pfad2<-"Q:\\AFS\\55_FDZ\\Forschungsprojekte\\2012-2094 DIW - Richter (4)\\Daten\\" 
 
 #  Outputdateien (im jeweiligen Datumsordner):
-#Pfad3<-"Q:\\AFS\\55_FDZ\\Forschungsprojekte\\2012-2094 DIW - Richter (4)\\KDFV\\2017_08_09_cs_2\\"
+Pfad3<-"Q:\\AFS\\55_FDZ\\Forschungsprojekte\\2012-2094 DIW - Richter (4)\\KDFV\\2018_12_11_cs_2\\"
 
 # R-Packages:
-#.libPaths("Q:\\AFS\\55_FDZ\\Forschungsprojekte\\2012-2094 DIW - Richter (4)\\Arbeitsdateien\\R_Packages_neu")
+.libPaths("Q:\\AFS\\55_FDZ\\Forschungsprojekte\\2012-2094 DIW - Richter (4)\\Arbeitsdateien\\R_Packages_neu")
 
 
 ######################################
@@ -79,11 +79,11 @@ rm(list=ls())
 # In "Pfad3" speichere ich die Ergebnisse ab. In diesem Fall die Log-Datei und die .csv, .pdf
 # In ".lib.path" liegen die benötigten Packages.
 
-getwd()    
-Pfad1 <- ("V:/projects/current/efficiency/02_KOMIED/04_paper_current/19_integrierte_unternehmen_cs/02_R_code/05_Produktivitaet_Schaetzung/Arbeitsdaten/")
-Pfad2 <- ("V:/projects/current/efficiency/02_KOMIED/04_paper_current/19_integrierte_unternehmen_cs/02_R_code/05_Produktivitaet_Schaetzung/Daten/")
-Pfad3 <- ("V:/projects/current/efficiency/02_KOMIED/04_paper_current/19_integrierte_unternehmen_cs/02_R_code/05_Produktivitaet_Schaetzung/localoutput/")
-.libPaths("V:\\projects\\current\\efficiency\\02_KOMIED\\04_paper_current\\19_integrierte_unternehmen_cs\\02_R_code\\00_packages")
+#getwd()    
+#Pfad1 <- ("V:/projects/current/efficiency/02_KOMIED/04_paper_current/19_integrierte_unternehmen_cs/02_R_code/05_Produktivitaet_Schaetzung/Arbeitsdaten/")
+#Pfad2 <- ("V:/projects/current/efficiency/02_KOMIED/04_paper_current/19_integrierte_unternehmen_cs/02_R_code/05_Produktivitaet_Schaetzung/Daten/")
+#Pfad3 <- ("V:/projects/current/efficiency/02_KOMIED/04_paper_current/19_integrierte_unternehmen_cs/02_R_code/05_Produktivitaet_Schaetzung/localoutput/")
+#.libPaths("V:\\projects\\current\\efficiency\\02_KOMIED\\04_paper_current\\19_integrierte_unternehmen_cs\\02_R_code\\00_packages")
 
 
 ######################################
@@ -226,28 +226,14 @@ gmm_moment_condition <- function(betas){
   omega <<- data_gmm$Phi - Inputs_gmm%*%betas -Inputs_fixed%*%betas_fixed
   lag_omega <<- data_gmm$lag_Phi-lag_Inputs_gmm%*%betas - lag_Inputs_fixed%*%betas_fixed
   omega_pol <<- cbind(rep(1,n),lag_omega,lag_omega^2,lag_omega^3
-                      ,data_gmm$lag1_unlisted
-                      ,data_gmm$lag1_listed
-                      ,data_gmm$lag1_unlisted*data_gmm$lag1_eigentuemer2
-                      ,data_gmm$lag1_listed*data_gmm$lag1_eigentuemer2
-                      ,data_gmm$lag1_shareF,data_gmm$shareFEW
-                      #,data_gmm$shareF*data_gmm$shareFEW
-                      #,data_gmm$shareF*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
-                      #,data_gmm$shareFEW*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
-                      #,data_gmm$shareF*data_gmm$lag1_privlaw
-                      #,data_gmm$shareFEW*data_gmm$lag1_privlaw
+                      ,data_gmm$lag1_privlaw
+                      ,data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
+                      ,data_gmm$lag2_shareF,data_gmm$shareFEW
                       )
   AR1 <<- lm(omega ~ lag_omega + I(lag_omega^2) + I(lag_omega^3) 
-             + data_gmm$lag1_unlisted 
-             + data_gmm$lag1_listed
-             + I(data_gmm$lag1_unlisted*data_gmm$lag1_eigentuemer2)
-             + I(data_gmm$lag1_listed*data_gmm$lag1_eigentuemer2)
-             + data_gmm$lag1_shareF + data_gmm$shareFEW 
-             #+ I(data_gmm$shareF*data_gmm$shareFEW)
-             #+ I(data_gmm$shareF*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2) 
-             #+ I(data_gmm$shareFEW*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2)
-             #+ I(data_gmm$shareF*data_gmm$lag1_privlaw)
-             #+ I(data_gmm$shareFEW*data_gmm$lag1_privlaw)
+             + data_gmm$lag1_privlaw
+             + I(data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2)
+             + data_gmm$lag2_shareF + data_gmm$shareFEW 
              )
   g_b <<- as.vector(AR1$coefficients)
   innovation <<- omega - omega_pol%*%g_b
@@ -292,13 +278,12 @@ boot.acf <- function(data,indices,method){
                             ,data_bp$suburban,data_bp$rurald,data_bp$rurals
                             ,data_bp$l_m*data_bp$f_m,data_bp$l_m*data_bp$k_m
                             ,data_bp$f_m*data_bp$k_m))
-  data_bp$lag1_unlisted <- lag(data_bp$unlisted)
-  data_bp$lag1_listed <- lag(data_bp$listed)
+  data_bp$lag1_privlaw <- lag(data_bp$privlaw)
   data_bp$lag1_eigentuemer2 <- lag(data_bp$eigentuemer2)
   data_bp$lag1_shareF <- lag(data_bp$shareF)
   data_bp$lag2_shareF <- lag(data_bp$shareF,2)
   data_bp$lag1_shareFEW <- lag(data_bp$shareFEW)
-  data_gmm <<- subset(data_bp,is.na(lag_Phi)==FALSE)
+  data_gmm <<- subset(data_bp,is.na(lag_Phi)==FALSE & is.na(lag2_shareF)==FALSE)
   n <<- nrow(data_gmm)
   Inputs_gmm <<- as.matrix(cbind(rep(1,nrow(data_gmm)),data_gmm$l_m,data_gmm$f_m,data_gmm$k_m
                                  ,0.5*(data_gmm$l_m)^2,0.5*(data_gmm$f_m)^2,0.5*(data_gmm$k_m)^2
@@ -325,8 +310,10 @@ boot.acf <- function(data,indices,method){
                                  ,lag(data_bp$suburban),lag(data_bp$rurald),lag(data_bp$rurals)
                                  ,lag(data_bp$l_m)*lag(data_bp$f_m)
                                  ,lag(data_bp$l_m)*lag(data_bp$k_m)
-                                 ,lag(data_bp$f_m)*lag(data_bp$k_m)))
+                                 ,lag(data_bp$f_m)*lag(data_bp$k_m)
+                                 ,lag(data_bp$shareF,2)))
   lag_Inputs_gmm <<- na.omit(lag_Inputs)
+  lag_Inputs_gmm <<- lag_Inputs_gmm[,1:20]
   Inputs_fixed <<- as.matrix(rep(0,nrow(data_gmm)))
   lag_Inputs_fixed <<- as.matrix(rep(0,nrow(data_gmm)))
   lag_Inputs_fixed <<- na.omit(lag_Inputs_fixed)
@@ -336,8 +323,10 @@ boot.acf <- function(data,indices,method){
                  ,data_bp$wm_NWG*data_bp$defl_wm_NWG,data_bp$se_gas*data_bp$defl_se_eg
                  ,data_bp$se_oil*data_bp$defl_se_oil
                  ,data_bp$se_EE2*log(100),data_bp$suburban,data_bp$rurald,data_bp$rurals
-                 ,data_bp$l_m*lag(data_bp$f_m),data_bp$l_m*data_bp$k_m,lag(data_bp$f_m)*data_bp$k_m)
+                 ,data_bp$l_m*lag(data_bp$f_m),data_bp$l_m*data_bp$k_m,lag(data_bp$f_m)*data_bp$k_m
+                 ,lag(data_bp$shareF,2))
   instr_gmm <<- na.omit(instr)
+  instr_gmm <<- instr_gmm[,1:20]
   starting_values <<- lm(va3_m ~ l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2) 
                          + l_m:f_m + l_m:k_m + f_m:k_m + I(ga*defl_ga) + I(wa*defl_wa) 
                          + I(sa*p_sa_log) + I(wm_NWG*defl_wm_NWG) + I(se_gas*defl_se_eg) 
@@ -854,165 +843,165 @@ data_p_all$t <- as.numeric(factor(data_p_all$Jahr))
 
 
 
-##########################################
-##    3.1 Outsourcing 1: Arbeitnehmer   ##
-##########################################
-
-
-
-
-# Grundmodell mit Controls in t-1 (all utilities)
-# -------------------------------------------------
-out1_OLS1 <- lm(shareF ~  t + I(t^2) 
-               # andere Reorganisation-Variablen
-               + lag(data_p$privlaw)  + lag(data_p$eigentuemer2) + lag(data_p$shareFEW)
-               # Unternehmensgröße und Produktionsprozess
-               + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
-               # Sektoren und Kundenstruktur
-               + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
-               + se_sonst
-               # Environment
-               + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
-               + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
-               ,data_p_all)
-summary(out1_OLS1)
-
-
-# Grundmodell mit Interaktionen in Controls in t-1 (all utilities)
-# -----------------------------------------------------------------
-out1_OLS2 <- lm(shareF ~  t + I(t^2) 
-                # andere Reorganisation-Variablen
-                + lag(data_p$privlaw)  + I(lag(data_p$privlaw)*lag(data_p$eigentuemer2))
-                + lag(data_p$shareFEW)
-                # Unternehmensgröße und Produktionsprozess
-                + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
-                # Sektoren und Kundenstruktur
-                + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
-                + se_sonst
-                # Environment
-                + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
-                + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
-                ,data_p_all)
-summary(out1_OLS2)
-
-
-
-
-# Grundmodell mit Controls in t-1 (mixed utilities)
-# -------------------------------------------------
-out1_OLS3 <- lm(shareF ~  t + I(t^2) 
-                # andere Reorganisation-Variablen
-                + lag(data_p$privlaw)  + lag(data_p$eigentuemer2) + lag(data_p$shareFEW)
-                # Unternehmensgröße und Produktionsprozess
-                + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
-                # Sektoren und Kundenstruktur
-                + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
-                + se_sonst
-                # Environment
-                + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
-                + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
-                ,data_p)
-summary(out1_OLS3)
-
-
-# Grundmodell mit Interaktionen in Controls in t-1 (mixed utilities)
-# ------------------------------------------------------------------
-out1_OLS4 <- lm(shareF ~  t + I(t^2) 
-                # andere Reorganisation-Variablen
-                + lag(data_p$privlaw)  + I(lag(data_p$privlaw)*lag(data_p$eigentuemer2))
-                + lag(data_p$shareFEW)
-                # Unternehmensgröße und Produktionsprozess
-                + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
-                # Sektoren und Kundenstruktur
-                + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
-                + se_sonst
-                # Environment
-                + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
-                + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
-                ,data_p)
-summary(out1_OLS4)
-
-
-
-
-##########################################
-##    3.2 Outsourcing 2: Produktion     ##
-##########################################
-
-
-
-# Grundmodell mit Controls in t-1 (all utilities)
-# -----------------------------------------------
-out2_OLS1 <- lm(shareFEW ~  t + I(t^2) 
-                # andere Reorganisation-Variablen
-                + lag(data_p$privlaw)  + lag(data_p$eigentuemer2) + lag(data_p$shareF)
-                # Unternehmensgröße und Produktionsprozess
-                + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
-                # Sektoren und Kundenstruktur
-                + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
-                + se_sonst
-                # Environment
-                + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
-                + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
-                ,data_p_all)
-summary(out2_OLS1)
-
-
-# Grundmodell mit Interaktionen in Controls in t-1 (all utilities)
-# ----------------------------------------------------------------
-out2_OLS2 <- lm(shareFEW ~  t + I(t^2) 
-                # andere Reorganisation-Variablen
-                + lag(data_p$privlaw)  + I(lag(data_p$privlaw)*lag(data_p$eigentuemer2))
-                + lag(data_p$shareF)
-                # Unternehmensgröße und Produktionsprozess
-                + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
-                # Sektoren und Kundenstruktur
-                + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
-                + se_sonst
-                # Environment
-                + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
-                + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
-                ,data_p_all)
-summary(out2_OLS2)
-
-
-
-
-# Grundmodell mit Controls in t-1 (mixed utilities)
-# -------------------------------------------------
-out2_OLS3 <- lm(shareFEW ~  t + I(t^2)
-               # andere Reorganisation-Variablen
-               + lag(data_p$privlaw)  + lag(data_p$eigentuemer2) + lag(data_p$shareF)
-               # Unternehmensgröße und Produktionsprozess
-               + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
-               # Sektoren und Kundenstruktur
-               + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
-               + se_sonst
-               # Environment
-               + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
-               + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
-               ,data_p)
-summary(out2_OLS3)
-
-
-# Grundmodell mit Interaktionen in Controls in t-1 (mixed utilities)
-# ------------------------------------------------------------------
-out2_OLS4 <- lm(shareFEW ~  t + I(t^2)
-                # andere Reorganisation-Variablen
-                + lag(data_p$privlaw)  + I(lag(data_p$privlaw)*lag(data_p$eigentuemer2))
-                + lag(data_p$shareF)
-                # Unternehmensgröße und Produktionsprozess
-                + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
-                # Sektoren und Kundenstruktur
-                + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
-                + se_sonst
-                # Environment
-                + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
-                + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
-                ,data_p)
-summary(out2_OLS4)
-
-
+# ##########################################
+# ##    3.1 Outsourcing 1: Arbeitnehmer   ##
+# ##########################################
+# 
+# 
+# 
+# 
+# # Grundmodell mit Controls in t-1 (all utilities)
+# # -------------------------------------------------
+# out1_OLS1 <- lm(shareF ~  t + I(t^2) 
+#                # andere Reorganisation-Variablen
+#                + lag(data_p$privlaw)  + lag(data_p$eigentuemer2) + lag(data_p$shareFEW)
+#                # Unternehmensgröße und Produktionsprozess
+#                + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
+#                # Sektoren und Kundenstruktur
+#                + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
+#                + se_sonst
+#                # Environment
+#                + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
+#                + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
+#                ,data_p_all)
+# summary(out1_OLS1)
+# 
+# 
+# # Grundmodell mit Interaktionen in Controls in t-1 (all utilities)
+# # -----------------------------------------------------------------
+# out1_OLS2 <- lm(shareF ~  t + I(t^2) 
+#                 # andere Reorganisation-Variablen
+#                 + lag(data_p$privlaw)  + I(lag(data_p$privlaw)*lag(data_p$eigentuemer2))
+#                 + lag(data_p$shareFEW)
+#                 # Unternehmensgröße und Produktionsprozess
+#                 + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
+#                 # Sektoren und Kundenstruktur
+#                 + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
+#                 + se_sonst
+#                 # Environment
+#                 + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
+#                 + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
+#                 ,data_p_all)
+# summary(out1_OLS2)
+# 
+# 
+# 
+# 
+# # Grundmodell mit Controls in t-1 (mixed utilities)
+# # -------------------------------------------------
+# out1_OLS3 <- lm(shareF ~  t + I(t^2) 
+#                 # andere Reorganisation-Variablen
+#                 + lag(data_p$privlaw)  + lag(data_p$eigentuemer2) + lag(data_p$shareFEW)
+#                 # Unternehmensgröße und Produktionsprozess
+#                 + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
+#                 # Sektoren und Kundenstruktur
+#                 + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
+#                 + se_sonst
+#                 # Environment
+#                 + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
+#                 + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
+#                 ,data_p)
+# summary(out1_OLS3)
+# 
+# 
+# # Grundmodell mit Interaktionen in Controls in t-1 (mixed utilities)
+# # ------------------------------------------------------------------
+# out1_OLS4 <- lm(shareF ~  t + I(t^2) 
+#                 # andere Reorganisation-Variablen
+#                 + lag(data_p$privlaw)  + I(lag(data_p$privlaw)*lag(data_p$eigentuemer2))
+#                 + lag(data_p$shareFEW)
+#                 # Unternehmensgröße und Produktionsprozess
+#                 + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
+#                 # Sektoren und Kundenstruktur
+#                 + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
+#                 + se_sonst
+#                 # Environment
+#                 + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
+#                 + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
+#                 ,data_p)
+# summary(out1_OLS4)
+# 
+# 
+# 
+# 
+# ##########################################
+# ##    3.2 Outsourcing 2: Produktion     ##
+# ##########################################
+# 
+# 
+# 
+# # Grundmodell mit Controls in t-1 (all utilities)
+# # -----------------------------------------------
+# out2_OLS1 <- lm(shareFEW ~  t + I(t^2) 
+#                 # andere Reorganisation-Variablen
+#                 + lag(data_p$privlaw)  + lag(data_p$eigentuemer2) + lag(data_p$shareF)
+#                 # Unternehmensgröße und Produktionsprozess
+#                 + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
+#                 # Sektoren und Kundenstruktur
+#                 + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
+#                 + se_sonst
+#                 # Environment
+#                 + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
+#                 + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
+#                 ,data_p_all)
+# summary(out2_OLS1)
+# 
+# 
+# # Grundmodell mit Interaktionen in Controls in t-1 (all utilities)
+# # ----------------------------------------------------------------
+# out2_OLS2 <- lm(shareFEW ~  t + I(t^2) 
+#                 # andere Reorganisation-Variablen
+#                 + lag(data_p$privlaw)  + I(lag(data_p$privlaw)*lag(data_p$eigentuemer2))
+#                 + lag(data_p$shareF)
+#                 # Unternehmensgröße und Produktionsprozess
+#                 + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
+#                 # Sektoren und Kundenstruktur
+#                 + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
+#                 + se_sonst
+#                 # Environment
+#                 + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
+#                 + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
+#                 ,data_p_all)
+# summary(out2_OLS2)
+# 
+# 
+# 
+# 
+# # Grundmodell mit Controls in t-1 (mixed utilities)
+# # -------------------------------------------------
+# out2_OLS3 <- lm(shareFEW ~  t + I(t^2)
+#                # andere Reorganisation-Variablen
+#                + lag(data_p$privlaw)  + lag(data_p$eigentuemer2) + lag(data_p$shareF)
+#                # Unternehmensgröße und Produktionsprozess
+#                + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
+#                # Sektoren und Kundenstruktur
+#                + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
+#                + se_sonst
+#                # Environment
+#                + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
+#                + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
+#                ,data_p)
+# summary(out2_OLS3)
+# 
+# 
+# # Grundmodell mit Interaktionen in Controls in t-1 (mixed utilities)
+# # ------------------------------------------------------------------
+# out2_OLS4 <- lm(shareFEW ~  t + I(t^2)
+#                 # andere Reorganisation-Variablen
+#                 + lag(data_p$privlaw)  + I(lag(data_p$privlaw)*lag(data_p$eigentuemer2))
+#                 + lag(data_p$shareF)
+#                 # Unternehmensgröße und Produktionsprozess
+#                 + size_med + size_large + lag(data_p$inv_int) + lag(data_p$wage)
+#                 # Sektoren und Kundenstruktur
+#                 + sn + ga + wa + se_gas + se_oil + se_hc + se_waste + se_bio + se_EE + se_water 
+#                 + se_sonst
+#                 # Environment
+#                 + suburban + rurald + rurals + lag(data_p$ShareTK) + lag(data_p$ShareWV) 
+#                 + lag(data_p$ShareHH) + lag(data_p$ShareWV_w)
+#                 ,data_p)
+# summary(out2_OLS4)
+# 
+# 
 
 
 
@@ -1206,7 +1195,7 @@ data_p$lag1_shareFEW <- lag(data_p$shareFEW)
 
 
 # Eliminiere im Gesamtdatensatz alle Beobachtungen, für die keine lag(Phi) vorliegen.
-data_gmm <- subset(data_p,is.na(lag_Phi)==FALSE)
+data_gmm <- subset(data_p,is.na(lag_Phi)==FALSE & is.na(lag2_shareF)==FALSE)
 pdim(data_gmm)
 n <- nrow(data_gmm)
 
@@ -1239,8 +1228,10 @@ lag_Inputs_all <- as.matrix(cbind(rep(1,nrow(data_p)),lag(data_p$l_m),lag(data_p
                                   ,lag(data_p$se_EE2)*log(100)
                                   ,lag(data_p$suburban),lag(data_p$rurald),lag(data_p$rurals)
                                   ,lag(data_p$l_m)*lag(data_p$f_m),lag(data_p$l_m)*lag(data_p$k_m)
-                                  ,lag(data_p$f_m)*lag(data_p$k_m)))
+                                  ,lag(data_p$f_m)*lag(data_p$k_m)
+                                  ,lag(data_p$shareF,2)))
 lag_Inputs_gmm_all <- na.omit(lag_Inputs_all)
+lag_Inputs_gmm_all <- lag_Inputs_gmm_all[,1:20]
 dim(lag_Inputs_gmm_all)
 
 
@@ -1278,8 +1269,10 @@ instr <- cbind(rep(1,nrow(data_p)),data_p$l_m,lag(data_p$f_m),data_p$k_m
                ,data_p$se_gas*data_p$defl_se_eg,data_p$se_oil*data_p$defl_se_oil
                ,data_p$se_EE2*log(100)
                ,data_p$suburban,data_p$rurald,data_p$rurals
-               ,data_p$l_m*lag(data_p$f_m),data_p$l_m*data_p$k_m,lag(data_p$f_m)*data_p$k_m)
+               ,data_p$l_m*lag(data_p$f_m),data_p$l_m*data_p$k_m,lag(data_p$f_m)*data_p$k_m
+               ,lag(data_p$shareF,2))
 instr_gmm <- na.omit(instr)
+instr_gmm <- instr_gmm[,1:20]
 dim(instr_gmm)
 
 
@@ -1518,24 +1511,20 @@ addmargins(table(data_gmm$Jahr[data_gmm$rts>1],useNA="ifany",dnn="IRS"))
 
 data_gmm$lag_omega2 <- data_gmm$lag_Phi - lag_Inputs_gmm_all%*%betas_final
 data_gmm <- pdata.frame(data.frame(data_gmm),index=c("id","Jahr"),row.names=FALSE)
+data_gmm <- pdata.frame(data.frame(data_gmm),index=c("id","Jahr"),row.names=FALSE)
 
 
 # Pooling (OLS)
 # --------------
 AR1_expost <- plm(omega2 ~ lag_omega2 + I(lag_omega2^2) + I(lag_omega2^3) 
-                  + lag1_unlisted 
-                  + lag1_listed 
-                  + I(lag1_unlisted*lag1_eigentuemer2) 
-                  + I(lag1_listed*lag1_eigentuemer2) 
-                  + lag1_shareF + shareFEW
-                  #+ I(shareF*shareFEW)
-                  #+ I(shareF*lag1_privlaw*lag1_eigentuemer2)
-                  #+ I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
-                  #+ I(shareF*lag1_privlaw)
-                  #+ I(shareFEW*lag1_privlaw)
-                  ,data=data_gmm,model="pooling",effect="time")
+                  + lag1_privlaw 
+                  + I(lag1_privlaw*lag1_eigentuemer2) 
+                  + lag2_shareF + shareFEW
+                  ,data=data_gmm,model="pooling",effect="time",index=c("id"))
 summary(AR1_expost)
 
+# WHITE standard errors robust against heteroscedasticity and autocorrelation?
+coeftest(AR1_expost,vcov=vcovHC(AR1_expost,method="arellano",cluster=c("group")))
 
 
 # Check for autocorrelation and heteroscedasticity
@@ -1543,24 +1532,14 @@ summary(AR1_expost)
 
 # Is autocorrelation a concern?
 dwtest(omega2 ~ lag_omega2 + I(lag_omega2^2) + I(lag_omega2^3) 
-       + lag1_unlisted 
-       + lag1_listed 
-       + I(lag1_unlisted*lag1_eigentuemer2) 
-       + I(lag1_listed*lag1_eigentuemer2)
-       + lag1_shareF 
+       + lag1_privlaw
+       + I(lag1_privlaw*lag1_eigentuemer2)
+       + lag2_shareF 
        + shareFEW
-       #+ I(shareF*shareFEW)
-       #+ I(shareF*lag1_privlaw*lag1_eigentuemer2)
-       #+ I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
-       #+ I(shareF*lag1_privlaw)
-       #+ I(shareFEW*lag1_privlaw)
        ,data=data_gmm)
 
 # Is heteroscedasticity a concern?
 bptest(AR1_expost)
-
-# WHITE standard errors robust against heteroscedasticity and autocorrelation?
-coeftest(AR1_expost,vcov=vcovHC(AR1_expost))
 
 
 
@@ -1573,18 +1552,9 @@ coeftest(AR1_expost,vcov=vcovHC(AR1_expost))
 # Testet, ob die private Beteiligung grundsätzlich einen signifikanten Einfluss auf die 
 # Produktivität hat.
 linearHypothesis(AR1_expost
-                 ,"I(lag1_unlisted * lag1_eigentuemer2)-lag1_unlisted + I(lag1_listed * lag1_eigentuemer2) - lag1_listed=0"
-                 ,vcov=vcovHC(AR1_expost,method="arellano"))
+                 ,"I(lag1_privlaw * lag1_eigentuemer2)-lag1_privlaw=0"
+                 ,vcov=vcovHC(AR1_expost,method="arellano",cluster=c("group")))
 
-# Testet, ob die private Beteiligung bei GmbHs einen signifikanten Einfluss auf die 
-# Produktivität hat.
-linearHypothesis(AR1_expost,"I(lag1_unlisted * lag1_eigentuemer2)-lag1_unlisted=0"
-                 ,vcov=vcovHC(AR1_expost,method="arellano"))
-
-# Testet, ob die private Beteiligung bei AGs einen signifikanten Einfluss auf die 
-# Produktivität hat.
-linearHypothesis(AR1_expost,"I(lag1_listed * lag1_eigentuemer2) - lag1_listed=0"
-                 ,vcov=vcovHC(AR1_expost,method="arellano"))
 
 
 
@@ -1599,116 +1569,11 @@ linearHypothesis(AR1_expost,"I(lag1_listed * lag1_eigentuemer2) - lag1_listed=0"
 
 # Bereite Paneldatensatz so auf, dass keine NAs in den Index-Variablen sind.
 data_p <- pdata.frame(as.data.frame(data_p),index=c("id","Jahr"),row.names=FALSE)
-
+data_p <- pdata.frame(as.data.frame(data_p),index=c("id","Jahr"),row.names=FALSE)
 
 # Kontrolliere zusätzlich für die Firmengröße (z.B. über revenues), da Eigenbetriebe tendenziell
 # kleiner sind als AGs, für die Präsenz in den einzelnen Sektoren und für die Siedlungsstruktur.
 
-
-
-###########################################
-##  6.2.1 Regression mit Zeiteffekten    ##
-###########################################
-
-
-# Kontrolliere für einen Zeittrend im Intercept, d.h. einen jährlichen aggregierten Produktivitäts-
-# zuwachs. Die Controls geben dann Auskunft darüber, ob sich Unternehmen bereinigt um Jahreseffekte
-# unterscheiden und sich dies auf die Organisationsstruktur zurückführen lässt.
-
-# Das ist die konservative Schätzung, die hypothetisch z.B. für zwei Unternehmen im gleichen Jahr
-# schaut, ob die Rechtsformwahl die Produktivität beeinflusst. So kann man sicher sein, dass der
-# Effekt allein auf den Unterschied in der Organisation zurückzuführen ist und nicht darauf, dass
-# privatwirtschaftliche Unternehmen vermehrt ab 2008 beobachtet werden und das allgemeine 
-# Produktivitätslevel ab 2008 höher liegt. Dies könnte auch das Resultat gestiegenen Wettbewerbs-
-# drucks sein.
-
-explain_pty <- plm(omega2 ~ 
-                   lag1_unlisted 
-                   + lag1_listed 
-                   + I(lag1_unlisted*lag1_eigentuemer2) 
-                   + I(lag1_listed*lag1_eigentuemer2)
-                   + lag1_shareF + shareFEW 
-                   #+ I(shareF*shareFEW)
-                   #+ I(shareF*lag1_privlaw*lag1_eigentuemer2)
-                   #+ I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
-                   #+ I(shareF*lag1_privlaw)
-                   #+ I(shareFEW*lag1_privlaw)
-                   # size
-                   + size_med + size_large
-                   # Sector controls
-                   +  I(sn*defl_sn) + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) 
-                   + I(wm_HH*defl_wm_HH) + I(wm_NWG*defl_wm_NWG) 
-                   # Fuel types
-                   + I(se_gas*defl_se_eg) + I(se_oil*defl_se_oil) + I(se_hc*defl_se_hc) 
-                   + I(se_waste*log(100)) + I(se_bio*log(100)) 
-                   + I(se_EE*log(100)) + I(se_water*log(100)) + I(se_sonst*log(100))
-                   # Siedlungscontrols
-                   + suburban + rurald + rurals
-                   # time effects 
-                   + t2005 + t2006 + t2007 +t2008 +t2009 + t2010 + t2011 + t2012 + t2013 + t2014
-                   ,data=data_p
-                   ,model="pooling",effect="time")
-summary(explain_pty)
-
-# Is heteroscedasticity a concern?
-bptest(explain_pty)
-
-# Is autocorrelation a concern?
-dwtest(omega2 ~
-       lag1_unlisted 
-       + lag1_listed 
-       + I(lag1_unlisted*lag1_eigentuemer2) 
-       + I(lag1_listed*lag1_eigentuemer2) 
-       + lag1_shareF + shareFEW 
-       #+ I(shareF*shareFEW)
-       #+ I(shareF*lag1_privlaw*lag1_eigentuemer2)
-       #+ I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
-       #+ I(shareF*lag1_privlaw)
-       #+ I(shareFEW*lag1_privlaw)
-       # size
-       + size_med + size_large
-       # Sector controls
-       +  I(sn*defl_sn) + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) 
-       + I(wm_HH*defl_wm_HH) + I(wm_NWG*defl_wm_NWG) 
-       # Fuel types
-       + I(se_gas*defl_se_eg) + I(se_oil*defl_se_oil) + I(se_hc*defl_se_hc) 
-       + I(se_waste*log(100)) + I(se_bio*log(100)) 
-       + I(se_EE*log(100)) + I(se_water*log(100)) + I(se_sonst*log(100))
-       # Siedlungscontrols
-       + suburban + rurald + rurals
-       # time effects
-       + t2005 + t2006 + t2007 +t2008 +t2009 + t2010 + t2011 + t2012 + t2013 + t2014
-       ,data=data_p)
-
-
-# WHITE standard errors robust against heteroscedasticity and autocorrelation?
-coeftest(explain_pty,vcov=vcovHC(explain_pty,method="arellano"))
-
-
-
-
-##############################
-## 6.2.2 Hypothesentests    ##
-##############################
-
-
-# Privat Beteiligung
-# ------------------
-# Testet, ob die private Beteiligung grundsätzlich einen signifikanten Einfluss auf die 
-# Produktivität hat.
-linearHypothesis(explain_pty
-                 ,"I(lag1_unlisted * lag1_eigentuemer2)-lag1_unlisted + I(lag1_listed * lag1_eigentuemer2) - lag1_listed=0"
-                 ,vcov=vcovHC(explain_pty,method="arellano"))
-
-# Testet, ob die private Beteiligung bei GmbHs einen signifikanten Einfluss auf die 
-# Produktivität hat.
-linearHypothesis(explain_pty,"I(lag1_unlisted * lag1_eigentuemer2)-lag1_unlisted=0"
-                 ,vcov=vcovHC(explain_pty,method="arellano"))
-
-# Testet, ob die private Beteiligung bei AGs einen signifikanten Einfluss auf die 
-# Produktivität hat.
-linearHypothesis(explain_pty,"I(lag1_listed * lag1_eigentuemer2) - lag1_listed=0"
-                 ,vcov=vcovHC(explain_pty,method="arellano"))
 
 
 
@@ -1727,16 +1592,9 @@ linearHypothesis(explain_pty,"I(lag1_listed * lag1_eigentuemer2) - lag1_listed=0
 
 
 explain_pty2 <- plm(omega2 ~ 
-                   lag1_unlisted 
-                   + lag1_listed 
-                   + I(lag1_unlisted*lag1_eigentuemer2) 
-                   + I(lag1_listed*lag1_eigentuemer2)
-                   + lag1_shareF + shareFEW 
-                   #+ I(shareF*shareFEW)
-                   #+ I(shareF*lag1_privlaw*lag1_eigentuemer2)
-                   #+ I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
-                   #+ I(shareF*lag1_privlaw)
-                   #+ I(shareFEW*lag1_privlaw)
+                   lag1_privlaw 
+                   + I(lag1_privlaw*lag1_eigentuemer2)
+                   + lag2_shareF + shareFEW 
                    # size
                    + size_med + size_large
                    # Sector controls
@@ -1747,24 +1605,23 @@ explain_pty2 <- plm(omega2 ~
                    + I(se_waste*log(100)) + I(se_bio*log(100)) 
                    + I(se_EE*log(100)) + I(se_water*log(100)) + I(se_sonst*log(100))
                    # Siedlungscontrols
-                   + suburban + rurald + rurals,data=data_p,model="pooling",effect="time")
+                   + suburban + rurald + rurals,data=data_p,model="pooling",effect="time"
+                   ,index=c("id"))
 summary(explain_pty2)
+
+
+# WHITE standard errors robust against heteroscedasticity and autocorrelation?
+coeftest(explain_pty2,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
+
 
 # Is heteroscedasticity a concern?
 bptest(explain_pty2)
 
 # Is autocorrelation a concern?
 dwtest(omega2 ~ 
-       lag1_unlisted 
-       + lag1_listed 
-       + I(lag1_unlisted*lag1_eigentuemer2) 
-       + I(lag1_listed*lag1_eigentuemer2) 
-       + lag1_shareF + shareFEW 
-       #+ I(shareF*shareFEW)
-       #+I(shareF*lag1_privlaw*lag1_eigentuemer2)
-       #+ I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
-       #+ I(shareF*lag1_privlaw)
-       #+ I(shareFEW*lag1_privlaw)
+       lag1_privlaw 
+       + I(lag1_privlaw*lag1_eigentuemer2) 
+       + lag2_shareF + shareFEW 
        # size
        + size_med + size_large
        # Sector controls
@@ -1778,8 +1635,7 @@ dwtest(omega2 ~
        + suburban + rurald + rurals,data=data_p)
 
 
-# WHITE standard errors robust against heteroscedasticity and autocorrelation?
-coeftest(explain_pty2,vcov=vcovHC(explain_pty2,method="arellano"))
+
 
 
 ###############################
@@ -1790,18 +1646,9 @@ coeftest(explain_pty2,vcov=vcovHC(explain_pty2,method="arellano"))
 # Testet, ob die private Beteiligung grundsätzlich einen signifikanten Einfluss auf die 
 # Produktivität hat.
 linearHypothesis(explain_pty2
-                 ,"I(lag1_unlisted * lag1_eigentuemer2)-lag1_unlisted + I(lag1_listed * lag1_eigentuemer2) - lag1_listed=0"
-                 ,vcov=vcovHC(explain_pty2,method="arellano"))
+                 ,"I(lag1_privlaw * lag1_eigentuemer2)-lag1_privlaw=0"
+                 ,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
 
-# Testet, ob die private Beteiligung bei GmbHs einen signifikanten Einfluss auf die 
-# Produktivität hat.
-linearHypothesis(explain_pty2,"I(lag1_unlisted * lag1_eigentuemer2)-lag1_unlisted=0"
-                 ,vcov=vcovHC(explain_pty2,method="arellano"))
-
-# Testet, ob die private Beteiligung bei AGs einen signifikanten Einfluss auf die 
-# Produktivität hat.
-linearHypothesis(explain_pty2,"I(lag1_listed * lag1_eigentuemer2) - lag1_listed=0"
-                 ,vcov=vcovHC(explain_pty2,method="arellano"))
 
 
 ###################################################################################################
