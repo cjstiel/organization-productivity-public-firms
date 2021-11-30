@@ -11,27 +11,35 @@
 #
 # structure
 # ---------
-# PART 1: sample construction (01_RCO_sample_construction_v20.R)
-# PART 2: data descriptives (02_RCO_descriptives_v24.R)
+# PART 1: sample construction (01_RCO_sample_construction.R)
+# PART 2: data descriptives (02_RCO_descriptives.R) 
 # PART 3: basic estimation
-#      3a: estimation for mixed utilities (03a_RCO_main_sample_v180.R)
-#      3b: estimation for water utilities (03b_RCO_water_v188.R)
-#      3c: estimation for electricity and gas utilities (03c_RCO_electricity_gas_v169.R)
-#      3d: estimation for heat and power plants (03d_RCO_heat_power_plants_v168.R)
+#      3a: estimation for mixed utilities (03a_RCO_main_sample.R)
+#      3b: estimation for water utilities (03b_RCO_water.R)
+#      3c: estimation for electricity and gas utilities (03c_RCO_electricity_gas.R)
+#      3d: estimation for heat and power plants (03d_RCO_heat_power_plants.R)
 # PART 4: estimation with interactions in LOM
-#      4a: interactions for mixed utilities (04a_RCO_interactions_main_v184.R) | this file
-#      4b: interactions for water (04b_RCO_interactions_water_v189.R)
-#      4c: interactions for elec&gas (04c_RCO__interactions_elecgas_v170.R)
-#      4d: interactions for heat&power (04d_RCO_interactions_heatpower_v187.R)
+#      4a: interactions for mixed utilities (04a_RCO_interactions_main.R)
+#      4b: interactions for water (04b_RCO_interactions_water.R)
+#      4c: interactions for elec&gas (04c_RCO__interactions_elecgas.R)
+#      4d: interactions for heat&power (04d_RCO_interactions_heatpower.R)
 # PART 5: sensitivity analyses
-#      5a: excludes gas utilities (05a_RCO_SensAn_wo_gas_v172.R)
-#      5b: lag outsourcing (05b_RCO_SensAn_lag1_out_v173.R)
-#      5c: lag2 outsourcing (05c_RCO_SensAn_lag2_out_v174.R)
-#      5d: time-varying pdt technology (05d_RCO_SensAn_time_v183.R)
+#      5a: excludes gas utilities (05a_RCO_SensAn_wo_gas.R)
+#      5b: lag outsourcing (05b_RCO_SensAn_lag1_out.R)
+#      5c: lag2 outsourcing (05c_RCO_SensAn_lag2_out.R) | this file
+#      5d: time-varying pdt technology for mixed utilities (05d_RCO_SensAn_time_main.R)
+#      5e: time-varying pdt technology for elec&gas (05d_RCO_SensAn_time_elec_gas.R)
 #
 #
+# -----------------------------------------------------------------------------------------------
+#
+#				PART 5: SENSITIVITY ANALYSES
+#
+# -----------------------------------------------------------------------------------------------
+# content: This program repeats the analysis for the 'mixed utilities' sample but lags outsourcing
+# intensity for services by two periods (see Section A.3.1 in the supplementary material online).
+# version: 182
 #================================================================================================
-
 
 #================================================================================================
 #				0) Preparation                                              
@@ -138,22 +146,12 @@ gmm_moment_condition <- function(betas){
   omega_pol <<- cbind(rep(1,n),lag_omega,lag_omega^2,lag_omega^3
                       ,data_gmm$lag1_privlaw
                       ,data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
-                      ,data_gmm$shareF,data_gmm$shareFEW
-                      ,data_gmm$shareF*data_gmm$shareFEW
-                      ,data_gmm$shareF*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
-                      ,data_gmm$shareFEW*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2
-                      ,data_gmm$shareF*data_gmm$lag1_privlaw
-                      ,data_gmm$shareFEW*data_gmm$lag1_privlaw
+                      ,data_gmm$lag2_shareF,data_gmm$shareFEW
                       )
   AR1 <<- lm(omega ~ lag_omega + I(lag_omega^2) + I(lag_omega^3) 
              + data_gmm$lag1_privlaw 
              + I(data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2)
-             + data_gmm$shareF + data_gmm$shareFEW 
-             + I(data_gmm$shareF*data_gmm$shareFEW)
-             + I(data_gmm$shareF*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2) 
-             + I(data_gmm$shareFEW*data_gmm$lag1_privlaw*data_gmm$lag1_eigentuemer2)
-             + I(data_gmm$shareF*data_gmm$lag1_privlaw)
-             + I(data_gmm$shareFEW*data_gmm$lag1_privlaw)
+             + data_gmm$lag2_shareF + data_gmm$shareFEW 
              )
   g_b <<- as.vector(AR1$coefficients)
   innovation <<- omega - omega_pol%*%g_b
@@ -402,10 +400,10 @@ data_p_all <- pdata.frame(data0all, index=c("id","year"),row.names=FALSE)
 pdim(data_p_all)
 
 
+
 #=================================================================================================
 # 2) Start Analysis: Structural production function estimation (estimates TFP)				    	
 #=================================================================================================
-
 
 #=================================================================================================
 # 2.1 First-stage estimation (OLS)                         
@@ -421,8 +419,10 @@ pdim(data_p_all)
 # This obtains the following production function:
 # value-added_it = beta_l * l_it + beta_s * s_it + beta_k * k_it  + beta_ll * l_it^2 
 #                  + beta_ss * s_it^2  + beta_kk * k_it^2 + 0.5 * beta_ls * lit * s_it 
-#                  + 0.5 * b_lk * l_it * k_it + 0.5 * b_ks * k_it * s_it + w_it + u_it
+#                  + 0.5 * b_lk * l_it * k_it + 0.5 * b_ks * k_it * s_it + omega_it + u_it
 
+# Production function 
+# -------------------
 first_stage_m <- lm(va3_m ~
                     # production function inputs
                     l_m + f_m + k_m + I(0.5*l_m^2) +  I(0.5*f_m^2) + I(0.5*k_m^2) 
@@ -489,8 +489,6 @@ dim(Inputs)
 
 # Generate lag for legal form variable
 # ------------------------------------
-data_p$lag1_unlisted <- lag(data_p$unlisted)
-data_p$lag1_listed <- lag(data_p$listed)
 data_p$lag1_privlaw <- lag(data_p$privlaw)
 
 
@@ -588,10 +586,10 @@ instr_gmm <- na.omit(instr)
 dim(instr_gmm)
 
 
+#=================================================================================================
+# 2.3 Compute starting values for GMM                                             
+#=================================================================================================
 
-#=================================================================================================
-# 2.3 Compute starting values for GMM                                           
-#=================================================================================================
 
 # Run OLS to obtain starting values for the GMM procedure
 # -------------------------------------------------------
@@ -613,7 +611,6 @@ summary(starting_values_OLS)
 # Store coefficients
 # ------------------
 betas_basic_m <- as.vector(starting_values_OLS$coefficients)
-
 
 
 #=================================================================================================
@@ -784,12 +781,7 @@ data_gmm <- pdata.frame(data.frame(data_gmm),index=c("id","year"),row.names=FALS
 AR1_expost <- plm(omega2 ~ lag_omega2 + I(lag_omega2^2) + I(lag_omega2^3) 
                   + lag1_privlaw
                   + I(lag1_privlaw*lag1_eigentuemer2) 
-                  + shareF + shareFEW
-                  + I(shareF*shareFEW)
-                  + I(shareF*lag1_privlaw*lag1_eigentuemer2)
-                  + I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
-                  + I(shareF*lag1_privlaw)
-                  + I(shareFEW*lag1_privlaw)
+                  + lag2_shareF + shareFEW
                   ,data=data_gmm,model="pooling",effect="time", index=c("id"))
 summary(AR1_expost)
 
@@ -797,15 +789,10 @@ summary(AR1_expost)
 # Is autocorrelation a concern (Durbin-Watson test)?
 # --------------------------------------------------
 dwtest(omega2 ~ lag_omega2 + I(lag_omega2^2) + I(lag_omega2^3) 
-       + lag1_privlaw 
-       + I(lag1_privlaw*lag1_eigentuemer2)
-       + shareF 
+       + lag1_privlaw
+       + I(lag1_privlaw*lag1_eigentuemer2) 
+       + lag2_shareF 
        + shareFEW
-       + I(shareF*shareFEW)
-       + I(shareF*lag1_privlaw*lag1_eigentuemer2)
-       + I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
-       + I(shareF*lag1_privlaw)
-       + I(shareFEW*lag1_privlaw)
        ,data=data_gmm)
 
 
@@ -832,36 +819,6 @@ linearHypothesis(AR1_expost
                  ,vcov=vcovHC(AR1_expost,method="arellano",cluster=c("group")))
 
 
-# Hypothesis test for mixed ownership & outsourcing
-# --------------------------------------------------
-# Does mixed ownership significantly alter the productivity effect of service outsourcing?
-linearHypothesis(AR1_expost
-                 ,"I(shareF * lag1_privlaw * lag1_eigentuemer2)- I(shareF * lag1_privlaw)=0"
-                 ,vcov=vcovHC(AR1_expost,method="arellano",cluster=c("group")))
-
-# Does mixed ownership significantly alter the productivity effect of production outsourcing?
-linearHypothesis(AR1_expost
-                 ,"I(shareFEW * lag1_privlaw * lag1_eigentuemer2)- I(shareFEW * lag1_privlaw)=0"
-                 ,vcov=vcovHC(AR1_expost,method="arellano",cluster=c("group")))
-
-
-
-# Hypothesis test for legal form & outsourcing
-# --------------------------------------------
-# Are there significant differences in the productivity effect of service outsourcing between
-# utilities of different legal form?
-linearHypothesis(AR1_expost
-                 ,"I(shareF * lag1_privlaw) - shareF=0"
-                 ,vcov=vcovHC(AR1_expost,method="arellano",cluster=c("group")))
-
-
-# Are there significant differences in the productivity effect of production outsourcing between
-# utilities of different legal form?
-linearHypothesis(AR1_expost
-                 ,"I(shareFEW * lag1_privlaw) - shareFEW=0"
-                 ,vcov=vcovHC(AR1_expost,method="arellano",cluster=c("group")))
-
-
 #=================================================================================================
 # 4.2 Productivity levels
 #=================================================================================================
@@ -879,13 +836,8 @@ data_p <- pdata.frame(as.data.frame(data_p),index=c("id","year"),row.names=FALSE
 
 explain_pty2 <- plm(omega2 ~ 
                    lag1_privlaw
-                   + I(lag1_privlaw*lag1_eigentuemer2)
-                   + shareF + shareFEW 
-                   + I(shareF*shareFEW)
-                   + I(shareF*lag1_privlaw*lag1_eigentuemer2)
-                   + I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
-                   + I(shareF*lag1_privlaw)
-                   + I(shareFEW*lag1_privlaw)
+                   + I(lag1_privlaw*lag1_eigentuemer2) 
+                   + lag2_shareF + shareFEW 
                    + size_med + size_large
                    +  I(sn*defl_sn) + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) 
                    + I(wm_HH*defl_wm_HH) + I(wm_NWG*defl_wm_NWG) 
@@ -906,13 +858,8 @@ bptest(explain_pty2)
 # --------------------------------------------------
 dwtest(omega2 ~ 
        lag1_privlaw
-       + I(lag1_privlaw*lag1_eigentuemer2)
-       + shareF + shareFEW 
-       + I(shareF*shareFEW)
-       + I(shareF*lag1_privlaw*lag1_eigentuemer2)
-       + I(shareFEW*lag1_privlaw*lag1_eigentuemer2)
-       + I(shareF*lag1_privlaw)
-       + I(shareFEW*lag1_privlaw)
+       + I(lag1_privlaw*lag1_eigentuemer2) 
+       + lag2_shareF + shareFEW 
        + size_med + size_large
        +  I(sn*defl_sn) + I(ga*defl_ga) + I(wa*defl_wa) + I(sa*p_sa_log) 
        + I(wm_HH*defl_wm_HH) + I(wm_NWG*defl_wm_NWG) 
@@ -936,35 +883,6 @@ coeftest(explain_pty2,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("grou
 
 linearHypothesis(explain_pty2
                  ,"I(lag1_privlaw * lag1_eigentuemer2)-lag1_privlaw=0"
-                 ,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
-
-
-# Hypothesis test for mixed ownership & outsourcing
-# --------------------------------------------------
-# Does mixed ownership significantly alter the productivity effect of service outsourcing?
-linearHypothesis(explain_pty2
-                 ,"I(shareF * lag1_privlaw * lag1_eigentuemer2)- I(shareF * lag1_privlaw)=0"
-                 ,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
-
-# Does mixed ownership significantly alter the productivity effect of production outsourcing?
-linearHypothesis(explain_pty2
-                 ,"I(shareFEW * lag1_privlaw * lag1_eigentuemer2)- I(shareFEW * lag1_privlaw)=0"
-                 ,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
-
-
-
-# Hypothesis test for legal form & outsourcing
-# --------------------------------------------
-# Are there significant differences in the productivity effect of service outsourcing between
-# utilities of different legal form?
-linearHypothesis(explain_pty2
-                 ,"I(shareF * lag1_privlaw) - shareF=0"
-                 ,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
-
-# Are there significant differences in the productivity effect of production outsourcing between
-# utilities of different legal form?
-linearHypothesis(explain_pty2
-                 ,"I(shareFEW * lag1_privlaw) - shareFEW=0"
                  ,vcov=vcovHC(explain_pty2,method="arellano",cluster=c("group")))
 
 

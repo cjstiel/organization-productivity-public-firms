@@ -27,13 +27,14 @@
 #      5a: excludes gas utilities (05a_RCO_SensAn_wo_gas.R)
 #      5b: lag outsourcing (05b_RCO_SensAn_lag1_out.R)
 #      5c: lag2 outsourcing (05c_RCO_SensAn_lag2_out.R)
-#      5d: time-varying pdt technology (05d_RCO_SensAn_time.R)
+#      5d: time-varying pdt technology for mixed utilities (05d_RCO_SensAn_time_main.R)
+#      5e: time-varying pdt technology for elec&gas (05d_RCO_SensAn_time_elec_gas.R)
 #
 #
 # -----------------------------------------------------------------------------------------------
 #
 #				PART 3: ESTIMATION (BASE MODEL)
-'
+#
 # -----------------------------------------------------------------------------------------------
 # content: This program estimates firm-level productivity and runs the productivity regressions 
 # for the subsample "pure water utilities".
@@ -718,7 +719,7 @@ addmargins(table(data_p$year[data_p$rts>1],useNA="ifany",dnn="IRS"))
 
 
 #=================================================================================================
-# 5.1 Productivity growth (Markov process for productivity, Table 7)       
+# 5.1 Productivity growth (Markov process for productivity)       
 #=================================================================================================
 
 
@@ -773,7 +774,7 @@ linearHypothesis(AR1_expost
 
 
 #=================================================================================================
-# 5.2 Productivity levels (Table 8)
+# 5.2 Productivity levels
 #=================================================================================================
 
 

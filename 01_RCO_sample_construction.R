@@ -27,7 +27,8 @@
 #      5a: excludes gas utilities (05a_RCO_SensAn_wo_gas.R)
 #      5b: lag outsourcing (05b_RCO_SensAn_lag1_out.R)
 #      5c: lag2 outsourcing (05c_RCO_SensAn_lag2_out.R)
-#      5d: time-varying pdt technology (05d_RCO_SensAn_time.R)
+#      5d: time-varying pdt technology for mixed utilities (05d_RCO_SensAn_time_main.R)
+#      5e: time-varying pdt technology for elec&gas (05d_RCO_SensAn_time_elec_gas.R)
 #
 #
 # -----------------------------------------------------------------------------------------------
