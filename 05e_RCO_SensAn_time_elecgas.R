@@ -14,12 +14,12 @@
 # PART 1: sample construction (01_RCO_sample_construction.R)
 # PART 2: data descriptives (02_RCO_descriptives.R) 
 # PART 3: basic estimation
-#      3a: estimation for mixed utilities (03a_RCO_main_sample.R) 
+#      3a: estimation for multi-utilities (03a_RCO_main_sample.R) 
 #      3b: estimation for water utilities (03b_RCO_water.R)
 #      3c: estimation for electricity and gas utilities (03c_RCO_electricity_gas.R)
 #      3d: estimation for heat and power plants (03d_RCO_heat_power_plants.R)
 # PART 4: estimation with interactions in LOM
-#      4a: interactions for mixed utilities (04a_RCO_interactions_main.R)
+#      4a: interactions for multi-utilities (04a_RCO_interactions_main.R)
 #      4b: interactions for water (04b_RCO_interactions_water.R)
 #      4c: interactions for elec&gas (04c_RCO__interactions_elecgas.R)
 #      4d: interactions for heat&power (04d_RCO_interactions_heatpower.R)
@@ -27,7 +27,7 @@
 #      5a: excludes gas utilities (05a_RCO_SensAn_wo_gas.R)
 #      5b: lag outsourcing (05b_RCO_SensAn_lag1_out.R)
 #      5c: lag2 outsourcing (05c_RCO_SensAn_lag2_out.R)
-#      5d: time-varying pdt technology for mixed utilities (05d_RCO_SensAn_time_main.R)
+#      5d: time-varying pdt technology for multi-utilities (05d_RCO_SensAn_time_main.R)
 #      5e: time-varying pdt technology for elec&gas (05d_RCO_SensAn_time_elec_gas.R) | this file
 #
 #

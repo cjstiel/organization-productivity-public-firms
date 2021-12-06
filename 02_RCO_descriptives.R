@@ -14,12 +14,12 @@
 # PART 1: sample construction (01_RCO_sample_construction.R)
 # PART 2: data descriptives (02_RCO_descriptives.R) | this file
 # PART 3: basic estimation
-#      3a: estimation for mixed utilities (03a_RCO_main_sample.R)
+#      3a: estimation for multi-utilities (03a_RCO_main_sample.R)
 #      3b: estimation for water utilities (03b_RCO_water.R)
 #      3c: estimation for electricity and gas utilities (03c_RCO_electricity_gas.R)
 #      3d: estimation for heat and power plants (03d_RCO_heat_power_plants.R)
 # PART 4: estimation with interactions in LOM
-#      4a: interactions for mixed utilities (04a_RCO_interactions_main.R)
+#      4a: interactions for multi-utilities (04a_RCO_interactions_main.R)
 #      4b: interactions for water (04b_RCO_interactions_water.R)
 #      4c: interactions for elec&gas (04c_RCO__interactions_elecgas.R)
 #      4d: interactions for heat&power (04d_RCO_interactions_heatpower.R)
@@ -27,7 +27,7 @@
 #      5a: excludes gas utilities (05a_RCO_SensAn_wo_gas.R)
 #      5b: lag outsourcing (05b_RCO_SensAn_lag1_out.R)
 #      5c: lag2 outsourcing (05c_RCO_SensAn_lag2_out.R)
-#      5d: time-varying pdt technology for mixed utilities (05d_RCO_SensAn_time_main.R)
+#      5d: time-varying pdt technology for multi-utilities (05d_RCO_SensAn_time_main.R)
 #      5e: time-varying pdt technology for elec&gas (05d_RCO_SensAn_time_elec_gas.R)
 #
 #
@@ -151,7 +151,7 @@ pdim(data_p)
 # data_p = data_mixed + data_w + data_sg + data_ez
 
 
-# mixed utilities
+# multi-utilities
 # ----------------
 datamixed <- subset(data_p,(wa==1 & sa==0 & se==0 & sn==0 & wm==0 & ga==0)==FALSE
                       & (wa==0 & wm==0 & se==0 & (sa==1 | sn==1 | ga==1))==FALSE
@@ -193,7 +193,7 @@ length(unique(data_ez$id))
 #================================================================================================
 
 
-# mixed utilities
+# multi-utilities
 # ---------------
 dstat(as.data.frame(data_mixed$fremdeDL/10^6),d=2)
 
@@ -215,7 +215,7 @@ dstat(as.data.frame(data_ez$fremdeDL/10^6),d=2)
 #================================================================================================
 
 
-# mixed utilities
+# multi-utilities
 # ---------------
 dstat(as.data.frame(data_mixed$bruttolohn/10^6),d=2)
 
@@ -238,7 +238,7 @@ dstat(as.data.frame(data_ez$bruttolohn/10^6),d=2)
 #================================================================================================
 
 
-# mixed utilities
+# multi-utilities
 # ---------------
 dstat(as.data.frame(data_mixed$wage))
 
@@ -261,7 +261,7 @@ dstat(as.data.frame(data_ez$wage))
 #================================================================================================
 
 
-# mixed utilities
+# multi-utilities
 # ---------------
 dstat(as.data.frame(data_mixed$K_adj)/10^6,d=2)
 
@@ -284,7 +284,7 @@ dstat(as.data.frame(data_ez$K_adj)/10^6,d=2)
 #================================================================================================
 
 
-# mixed utilities
+# multi-utilities
 # ---------------
 dstat(as.data.frame(data_mixed$value_added3)/10^6,d=2)
 
@@ -311,7 +311,7 @@ dstat(as.data.frame(data_ez$value_added3)/10^6,d=2)
 #================================================================================================
 
 
-# mixed utilities
+# multi-utilities
 # ---------------
 addmargins(table(data_mixed$eigentuemer2,data_mixed$Jahr,useNA="ifany"))
 
@@ -334,7 +334,7 @@ addmargins(table(data_ez$eigentuemer2,data_ez$Jahr,useNA="ifany"))
 #================================================================================================
 
 
-# mixed utilities
+# multi-utilities
 # ---------------
 addmargins(table(data_mixed$status,data_mixed$Jahr,useNA="ifany"))
 
@@ -363,7 +363,7 @@ addmargins(table(data_ez$status,data_ez$Jahr,useNA="ifany"))
 # 3.3.1 Outsourcing intensity: services
 #================================================================================================
 
-# mixed utilities
+# multi-utilities
 # ---------------
 dstat(data_mixed$shareF,d=2)
 
@@ -385,7 +385,7 @@ dstat(data_ez$shareF,d=2)
 # 3.3.2 Outsourcing intensity: production
 #================================================================================================
 
-# mixed utilities
+# multi-utilities
 # ---------------
 # number of utilities that do not outsource
 round(dstat(data_mixed$shareFEW)[,13]/dstat(data_mixed$shareFEW)[,12],2)
