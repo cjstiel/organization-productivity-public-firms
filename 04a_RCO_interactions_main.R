@@ -4,8 +4,8 @@
 #
 #================================================================================================
 #
-# title: Remunicipalization, Corporatization, and Outsourcing: Public Firm Performance after  
-#        Reorganization
+# title: Remunicipalization, Corporatization, and Outsourcing: The Performance of Public-Sector
+# 	 Firms after Reorganization
 # ------------------------------------------------------------------------------------------------
 #
 #
