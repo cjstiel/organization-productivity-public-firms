@@ -16,7 +16,7 @@ _In advanced economies, public firms play an important role in sectors of genera
 
 I use official microdata from the _Federal Statistical Office_ consisting of
 
-- balance sheet and product data [_(AFiD)_](https://gitlab.com/modern-state-owned-firms/data/afid-data) from German public utilities covering the years 2003-14
+- balance sheet and product data [_(AFiD)_](https://gitlab.com/modern-state-owned-firms/data/afid-data) from German utilities covering the years 2003-14
 - as well as data on public firms in Germany [_(JAB)_](https://gitlab.com/modern-state-owned-firms/data/afid-data) and data from the [German business register](https://doi.org/10.21242/52121.2014.00.00.1.1.0).
 
 I merge the firm-level data with 
