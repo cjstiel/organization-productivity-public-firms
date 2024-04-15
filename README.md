@@ -14,10 +14,14 @@ _In advanced economies, public firms play an important role in sectors of genera
 
 ### Firm-level data
 
- I use official microdata from the Federal Statistical Office *(AFiD)*
+I use official microdata from the _Federal Statistical Office_ consisting of
 
-- consisting of balance sheet and product data from German electricity firms covering the years 2003-12
-- merging data sets from 9 different surveys.
+- balance sheet and product data [_(AFiD)_](https://gitlab.com/modern-state-owned-firms/data/afid-data) from German public utilities covering the years 2003-14
+- as well as data on public firms in Germany [_(JAB)_](https://gitlab.com/modern-state-owned-firms/data/afid-data) and data from the [German business register](https://doi.org/10.21242/52121.2014.00.00.1.1.0).
+
+I merge the firm-level data with 
+
+-  data on the [German economy](https://gitlab.com/modern-state-owned-firms/data/data-german-economy).
 
 See [gitlab.com/modern-state-owned-firms/data](https://gitlab.com/modern-state-owned-firms/data) for more information on the data sources and the linkage strategy to merge all the data sources.
 
@@ -29,4 +33,8 @@ I apply different statistical methods including
 - panel data econometrics (GMM, structural estimation)
 - bootstrap
 - hypothesis testing.
+
+## Further reading
+
+The article is part of the research project _Modern state-owned firms' performance - An empirical analysis of productivity, market power and innovation_ financed by the German Science Foundation (DFG, 2019-2023). Visit https://modern-state-owned-firms.gitlab.io/landing-page/ for more information on the project and related research in this field.
 
